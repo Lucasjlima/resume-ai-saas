@@ -45,6 +45,9 @@ public class Analysis {
     @Column(name = "feedback_json", nullable = false)
     private String feedbackJson;
 
+    @Column(name = "job_description", columnDefinition = "TEXT")
+    private String jobDescription;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AnalysisStatus status;

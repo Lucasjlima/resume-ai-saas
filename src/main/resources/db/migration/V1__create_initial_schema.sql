@@ -22,6 +22,7 @@ CREATE TABLE analyses (
     resume_id BIGINT NOT NULL,
     overall_score INTEGER NOT NULL,
     feedback_json JSONB NOT NULL,
+    job_description TEXT,
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT fk_analyses_resume FOREIGN KEY (resume_id) REFERENCES resumes (id) ON DELETE CASCADE
