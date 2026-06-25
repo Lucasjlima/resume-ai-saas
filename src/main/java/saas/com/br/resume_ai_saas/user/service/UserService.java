@@ -45,7 +45,7 @@ public class UserService {
             }
             user.setEmail(email);
         }
-        return userRepository.save(user);
+        return user;
     }
 
     @Transactional
