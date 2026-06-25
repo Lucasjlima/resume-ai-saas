@@ -8,6 +8,7 @@ import saas.com.br.resume_ai_saas.analyse.entity.AnalysisStatus;
 import saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException;
 import saas.com.br.resume_ai_saas.analyse.repository.AnalysisRepository;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
+import saas.com.br.resume_ai_saas.resume.exception.ResumeNotFoundException;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 
 import java.time.Instant;
@@ -35,7 +36,7 @@ public class AnalysisService {
     @Transactional
     public Analysis analyze(Long resumeId, String jobDescription) {
         Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new RuntimeException("Resume not found with id: " + resumeId));
+                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
 
         Analysis analysis = Analysis.builder()
                 .resume(resume)

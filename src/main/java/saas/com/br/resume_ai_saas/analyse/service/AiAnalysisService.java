@@ -1,5 +1,7 @@
 package saas.com.br.resume_ai_saas.analyse.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
@@ -7,6 +9,7 @@ import org.springframework.stereotype.Service;
 public class AiAnalysisService {
 
     private final ChatClient chatClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AiAnalysisService(ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder.build();
@@ -54,30 +57,15 @@ public class AiAnalysisService {
             throw new RuntimeException("AI returned invalid JSON response");
         }
         String json = cleaned.substring(start, end + 1);
-
-        int scoreStart = json.indexOf("\"overallScore\"") + 15;
-        int scoreEnd = json.indexOf(',', scoreStart);
-        if (scoreEnd == -1) scoreEnd = json.indexOf('}', scoreStart);
-        int overallScore = Integer.parseInt(json.substring(scoreStart, scoreEnd).trim());
-
-        int feedbackStart = json.indexOf("\"feedback\"");
-        int feedbackBraceOpen = json.indexOf('{', feedbackStart);
-        int feedbackBraceClose = findMatchingBrace(json, feedbackBraceOpen);
-        String feedbackJson = "{\"feedback\":" + json.substring(feedbackBraceOpen, feedbackBraceClose + 1) + "}";
-
-        return new AiAnalysisResult(overallScore, feedbackJson);
-    }
-
-    private int findMatchingBrace(String s, int open) {
-        int depth = 0;
-        for (int i = open; i < s.length(); i++) {
-            if (s.charAt(i) == '{') depth++;
-            else if (s.charAt(i) == '}') {
-                depth--;
-                if (depth == 0) return i;
-            }
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            int overallScore = root.path("overallScore").asInt();
+            JsonNode feedback = root.path("feedback");
+            String feedbackJson = "{\"feedback\":" + objectMapper.writeValueAsString(feedback) + "}";
+            return new AiAnalysisResult(overallScore, feedbackJson);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse AI response: " + e.getMessage(), e);
         }
-        return s.length() - 1;
     }
 
     public record AiAnalysisResult(int overallScore, String feedbackJson) {}
