@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import saas.com.br.resume_ai_saas.user.dto.UpdateUserRequest;
-import saas.com.br.resume_ai_saas.user.dto.UserRequest;
-import saas.com.br.resume_ai_saas.user.dto.UserResponse;
+import saas.com.br.resume_ai_saas.user.dto.request.UpdateUserRequest;
+import saas.com.br.resume_ai_saas.user.dto.request.UserRequest;
+import saas.com.br.resume_ai_saas.user.dto.response.UserResponse;
 import saas.com.br.resume_ai_saas.user.mapper.UserMapper;
 import saas.com.br.resume_ai_saas.user.service.UserService;
 

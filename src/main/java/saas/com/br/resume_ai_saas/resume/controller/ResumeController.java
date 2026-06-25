@@ -6,7 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import saas.com.br.resume_ai_saas.resume.dto.ResumeResponse;
+import saas.com.br.resume_ai_saas.resume.dto.response.ResumeResponse;
 import saas.com.br.resume_ai_saas.resume.mapper.ResumeMapper;
 import saas.com.br.resume_ai_saas.resume.service.ResumeService;
 

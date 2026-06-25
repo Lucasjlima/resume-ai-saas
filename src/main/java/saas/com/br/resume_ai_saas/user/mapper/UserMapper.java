@@ -1,7 +1,7 @@
 package saas.com.br.resume_ai_saas.user.mapper;
 
-import saas.com.br.resume_ai_saas.user.dto.UserRequest;
-import saas.com.br.resume_ai_saas.user.dto.UserResponse;
+import saas.com.br.resume_ai_saas.user.dto.request.UserRequest;
+import saas.com.br.resume_ai_saas.user.dto.response.UserResponse;
 import saas.com.br.resume_ai_saas.user.entity.User;
 import java.time.Instant;
 

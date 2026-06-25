@@ -1,4 +1,4 @@
-package saas.com.br.resume_ai_saas.analyse.dto;
+package saas.com.br.resume_ai_saas.analyse.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

@@ -1,4 +1,4 @@
-package saas.com.br.resume_ai_saas.user.dto;
+package saas.com.br.resume_ai_saas.user.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;

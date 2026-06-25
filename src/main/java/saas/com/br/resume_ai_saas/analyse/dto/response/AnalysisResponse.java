@@ -1,4 +1,4 @@
-package saas.com.br.resume_ai_saas.analyse.dto;
+package saas.com.br.resume_ai_saas.analyse.dto.response;
 
 import saas.com.br.resume_ai_saas.analyse.entity.AnalysisStatus;
 import java.time.Instant;

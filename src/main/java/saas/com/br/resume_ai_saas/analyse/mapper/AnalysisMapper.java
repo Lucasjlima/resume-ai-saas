@@ -1,6 +1,6 @@
 package saas.com.br.resume_ai_saas.analyse.mapper;
 
-import saas.com.br.resume_ai_saas.analyse.dto.AnalysisResponse;
+import saas.com.br.resume_ai_saas.analyse.dto.response.AnalysisResponse;
 import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
 
 public final class AnalysisMapper {

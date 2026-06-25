@@ -1,4 +1,4 @@
-package saas.com.br.resume_ai_saas.user.dto;
+package saas.com.br.resume_ai_saas.user.dto.response;
 
 import java.time.Instant;
 

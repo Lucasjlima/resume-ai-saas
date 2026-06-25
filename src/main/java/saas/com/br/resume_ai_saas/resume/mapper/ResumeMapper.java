@@ -1,6 +1,6 @@
 package saas.com.br.resume_ai_saas.resume.mapper;
 
-import saas.com.br.resume_ai_saas.resume.dto.ResumeResponse;
+import saas.com.br.resume_ai_saas.resume.dto.response.ResumeResponse;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 
 public final class ResumeMapper {
