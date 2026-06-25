@@ -1,7 +1,7 @@
 package saas.com.br.resume_ai_saas.resume.exception;
 
-public class UserNotFoundException extends RuntimeException {
+public class UserNotFoundException extends saas.com.br.resume_ai_saas.user.exception.UserNotFoundException {
     public UserNotFoundException(Long id) {
-        super("User not found with id: " + id);
+        super(id);
     }
 }
