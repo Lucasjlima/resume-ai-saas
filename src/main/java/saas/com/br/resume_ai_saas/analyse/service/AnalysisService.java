@@ -1,6 +1,7 @@
 package saas.com.br.resume_ai_saas.analyse.service;
 
 import lombok.RequiredArgsConstructor;
+import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
@@ -51,7 +52,7 @@ public class AnalysisService {
             AiAnalysisService.AiAnalysisResult result =
                     aiAnalysisService.analyze(resume.getRawText(), jobDescription);
             analysis.setOverallScore(result.overallScore());
-            analysis.setFeedbackJson(result.feedbackJson());
+            analysis.setFeedbackJson(new Gson().toJson(result.feedback()));
             analysis.setStatus(AnalysisStatus.COMPLETED);
         } catch (Exception e) {
             analysis.setStatus(AnalysisStatus.FAILED);
