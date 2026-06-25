@@ -3,8 +3,7 @@ package saas.com.br.resume_ai_saas.analyse.service;
 import com.google.gson.Gson;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import saas.com.br.resume_ai_saas.analyse.dto.response.AiAnalysisResult;
 
 @Service
 public class AiAnalysisService {
@@ -50,7 +49,4 @@ public class AiAnalysisService {
         String json = raw.trim().replaceAll("(?s)```json\\s*|```", "").trim();
         return gson.fromJson(json, AiAnalysisResult.class);
     }
-
-    public record Feedback(List<String> strengths, List<String> gaps, List<String> improvements) {}
-    public record AiAnalysisResult(int overallScore, Feedback feedback) {}
 }
