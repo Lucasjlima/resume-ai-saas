@@ -13,28 +13,27 @@ import saas.com.br.resume_ai_saas.analyse.service.AnalysisService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/resumes/{resumeId}/analyses")
+@RequestMapping("/api/analyses")
 @RequiredArgsConstructor
 public class AnalysisController {
 
     private final AnalysisService analysisService;
 
     @GetMapping
-    public ResponseEntity<List<AnalysisResponse>> findByResume(@PathVariable Long resumeId) {
+    public ResponseEntity<List<AnalysisResponse>> findByResume(@RequestParam Long resumeId) {
         List<AnalysisResponse> responses = analysisService.findByResumeId(resumeId).stream()
                 .map(AnalysisMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(responses);
     }
 
-    @GetMapping("/{analysisId}")
-    public ResponseEntity<AnalysisResponse> findById(@PathVariable Long resumeId,
-                                                      @PathVariable Long analysisId) {
-        return ResponseEntity.ok(AnalysisMapper.toResponse(analysisService.findById(analysisId)));
+    @GetMapping("/{id}")
+    public ResponseEntity<AnalysisResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(AnalysisMapper.toResponse(analysisService.findById(id)));
     }
 
     @PostMapping
-    public ResponseEntity<AnalysisResponse> analyze(@PathVariable Long resumeId,
+    public ResponseEntity<AnalysisResponse> analyze(@RequestParam Long resumeId,
                                                      @Valid @RequestBody AnalysisRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(AnalysisMapper.toResponse(

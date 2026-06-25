@@ -13,37 +13,35 @@ import saas.com.br.resume_ai_saas.resume.service.ResumeService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users/{userId}/resumes")
+@RequestMapping("/api/resumes")
 @RequiredArgsConstructor
 public class ResumeController {
 
     private final ResumeService resumeService;
 
     @GetMapping
-    public ResponseEntity<List<ResumeResponse>> findByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<ResumeResponse>> findByUser(@RequestParam Long userId) {
         List<ResumeResponse> responses = resumeService.findByUserId(userId).stream()
                 .map(ResumeMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(responses);
     }
 
-    @GetMapping("/{resumeId}")
-    public ResponseEntity<ResumeResponse> findById(@PathVariable Long userId,
-                                                    @PathVariable Long resumeId) {
-        return ResponseEntity.ok(ResumeMapper.toResponse(resumeService.findById(resumeId)));
+    @GetMapping("/{id}")
+    public ResponseEntity<ResumeResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(ResumeMapper.toResponse(resumeService.findById(id)));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResumeResponse> upload(@PathVariable Long userId,
+    public ResponseEntity<ResumeResponse> upload(@RequestParam Long userId,
                                                   @RequestParam("file") MultipartFile file) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResumeMapper.toResponse(resumeService.upload(userId, file)));
     }
 
-    @DeleteMapping("/{resumeId}")
-    public ResponseEntity<Void> delete(@PathVariable Long userId,
-                                        @PathVariable Long resumeId) {
-        resumeService.delete(resumeId);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        resumeService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
