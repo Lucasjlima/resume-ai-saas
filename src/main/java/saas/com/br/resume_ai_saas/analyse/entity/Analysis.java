@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import saas.com.br.resume_ai_saas.analyse.dto.response.Feedback;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 
 @Entity
@@ -43,7 +44,7 @@ public class Analysis {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "feedback_json", nullable = false)
-    private String feedbackJson;
+    private Feedback feedback;
 
     @Column(name = "job_description", columnDefinition = "TEXT")
     private String jobDescription;

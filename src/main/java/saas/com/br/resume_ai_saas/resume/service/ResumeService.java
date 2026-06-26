@@ -21,17 +21,20 @@ public class ResumeService {
     private final UserRepository userRepository;
     private final StorageService storageService;
     private final ResumeTextExtractionService textExtractionService;
+    private final ResumeTextRefinementService textRefinementService;
     private final ResumeService self;
 
     public ResumeService(ResumeRepository resumeRepository,
                          UserRepository userRepository,
                          StorageService storageService,
                          ResumeTextExtractionService textExtractionService,
+                         ResumeTextRefinementService textRefinementService,
                          @Lazy ResumeService self) {
         this.resumeRepository = resumeRepository;
         this.userRepository = userRepository;
         this.storageService = storageService;
         this.textExtractionService = textExtractionService;
+        this.textRefinementService = textRefinementService;
         this.self = self;
     }
 
@@ -47,18 +50,19 @@ public class ResumeService {
     }
 
     public Resume upload(Long userId, MultipartFile file) {
-        String fileUrl = storageService.store(userId, file);
         String rawText = textExtractionService.extract(file);
+        String refinedText = textRefinementService.refine(rawText);
+        String fileUrl = storageService.store(userId, file);
 
-        return self.saveResume(userId, file.getOriginalFilename(), fileUrl, rawText);
+        return self.saveResume(userId, file.getOriginalFilename(), fileUrl, refinedText);
     }
 
     @Transactional
-    public Resume saveResume(Long userId, String fileName, String fileUrl, String rawText) {
+    public Resume saveResume(Long userId, String fileName, String fileUrl, String refinedText) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
-        Resume resume = ResumeMapper.toEntity(user, fileName, fileUrl, rawText);
+        Resume resume = ResumeMapper.toEntity(user, fileName, fileUrl, refinedText);
         return resumeRepository.save(resume);
     }
 

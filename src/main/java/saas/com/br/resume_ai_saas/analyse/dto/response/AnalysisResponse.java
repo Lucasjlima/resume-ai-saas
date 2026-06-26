@@ -7,7 +7,7 @@ public record AnalysisResponse(
     Long id,
     Long resumeId,
     Integer overallScore,
-    String feedbackJson,
+    Feedback feedback,
     String jobDescription,
     AnalysisStatus status,
     Instant createdAt
