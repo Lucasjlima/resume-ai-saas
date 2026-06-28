@@ -14,6 +14,7 @@ CREATE TABLE resumes (
     raw_text TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     extraction_method VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
     CONSTRAINT fk_resumes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
