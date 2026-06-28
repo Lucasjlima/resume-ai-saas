@@ -4,11 +4,8 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,24 +33,19 @@ public class ResumeTextExtractionService {
             {"refect(?!ed\\b|ion\\b|ive\\b)", "reflect"},
     };
 
-    public String extract(MultipartFile file) {
-        try {
-            byte[] bytes = file.getBytes();
-            ByteArrayResource resource = new ByteArrayResource(bytes) {
-                @Override
-                public String getFilename() {
-                    return file.getOriginalFilename();
-                }
-            };
-            PagePdfDocumentReader reader = new PagePdfDocumentReader(resource);
-            List<Document> documents = reader.get();
-            String raw = documents.stream()
-                    .map(Document::getText)
-                    .collect(Collectors.joining("\n"));
-            return sanitize(raw);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to extract text from PDF: " + e.getMessage(), e);
-        }
+    public String extract(byte[] bytes, String filename) {
+        ByteArrayResource resource = new ByteArrayResource(bytes) {
+            @Override
+            public String getFilename() {
+                return filename;
+            }
+        };
+        PagePdfDocumentReader reader = new PagePdfDocumentReader(resource);
+        List<Document> documents = reader.get();
+        String raw = documents.stream()
+                .map(Document::getText)
+                .collect(Collectors.joining("\n"));
+        return sanitize(raw);
     }
 
     private String sanitize(String raw) {
@@ -67,10 +59,10 @@ public class ResumeTextExtractionService {
 
     private String replaceUnicodeLigatures(String text) {
         return text.replace("ﬀ", "ff")
-                   .replace("ﬁ", "fi")
-                   .replace("ﬂ", "fl")
-                   .replace("ﬃ", "ffi")
-                   .replace("ﬄ", "ffl");
+                .replace("ﬁ", "fi")
+                .replace("ﬂ", "fl")
+                .replace("ﬃ", "ffi")
+                .replace("ﬄ", "ffl");
     }
 
     private String fixDroppedLigatures(String text) {
@@ -92,8 +84,8 @@ public class ResumeTextExtractionService {
         text = text.replaceAll("[ \\t]{2,}", " ");
         text = text.replaceAll("(\\r?\\n){3,}", "\n\n");
         text = text.lines()
-                   .map(String::strip)
-                   .collect(Collectors.joining("\n"));
+                .map(String::strip)
+                .collect(Collectors.joining("\n"));
         return text.strip();
     }
 }

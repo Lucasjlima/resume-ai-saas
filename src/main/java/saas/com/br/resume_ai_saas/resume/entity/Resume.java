@@ -1,28 +1,13 @@
 package saas.com.br.resume_ai_saas.resume.entity;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
+import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
+import saas.com.br.resume_ai_saas.user.entity.User;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
-import saas.com.br.resume_ai_saas.user.entity.User;
 
 @Entity
 @Table(name = "resumes")
@@ -56,6 +41,10 @@ public class Resume {
     @Enumerated(EnumType.STRING)
     @Column(name = "extraction_method", nullable = false)
     private ExtractionMethod extractionMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ResumeStatus status;
 
     @OneToMany(mappedBy = "resume", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

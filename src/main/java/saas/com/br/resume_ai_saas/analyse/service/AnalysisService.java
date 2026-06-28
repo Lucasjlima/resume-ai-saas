@@ -1,9 +1,11 @@
 package saas.com.br.resume_ai_saas.analyse.service;
 
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 import saas.com.br.resume_ai_saas.analyse.dto.response.AiAnalysisResult;
 import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
 import saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException;
@@ -15,6 +17,7 @@ import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 import java.util.List;
 
 @Service
+@Slf4j
 public class AnalysisService {
 
     private final AnalysisRepository analysisRepository;
@@ -45,16 +48,26 @@ public class AnalysisService {
 
     public Analysis analyze(Long resumeId, String jobDescription) {
         Analysis analysis = self.initializeAnalysis(resumeId, jobDescription);
+        self.runAiAnalysisAsync(analysis);
+        return analysis;
+    }
 
+    @Async
+    public void runAiAnalysisAsync(Analysis analysis) {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        log.info("[Análise {}] Iniciando processamento assíncrono da IA...", analysis.getId());
         try {
             AiAnalysisResult result =
-                    aiAnalysisService.analyze(analysis.getResume().getRawText(), jobDescription);
+                    aiAnalysisService.analyze(analysis.getResume().getRawText(), analysis.getJobDescription());
             self.completeAnalysisWithSuccess(analysis.getId(), result);
+            stopWatch.stop();
+            log.info("[Análise {}] Finalizada com SUCESSO em {} segundos ({} ms)",
+                    analysis.getId(), stopWatch.getTotalTimeSeconds(), stopWatch.getTotalTimeMillis());
         } catch (Exception e) {
             self.completeAnalysisWithFailure(analysis.getId(), e);
         }
-
-        return self.findById(analysis.getId());
     }
 
     @Transactional
