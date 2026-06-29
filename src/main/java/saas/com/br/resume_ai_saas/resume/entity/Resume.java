@@ -3,11 +3,11 @@ package saas.com.br.resume_ai_saas.resume.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
-import saas.com.br.resume_ai_saas.user.entity.User;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "resumes")
@@ -22,9 +22,8 @@ public class Resume {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
     @Column(name = "file_name", nullable = false)
     private String fileName;
