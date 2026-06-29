@@ -1,5 +1,6 @@
 package saas.com.br.resume_ai_saas.exception;
 
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -21,8 +23,6 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-            saas.com.br.resume_ai_saas.user.exception.UserNotFoundException.class,
-            saas.com.br.resume_ai_saas.resume.exception.UserNotFoundException.class,
             saas.com.br.resume_ai_saas.resume.exception.ResumeNotFoundException.class,
             saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException.class
     })
@@ -31,10 +31,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ex.getMessage(), 404));
     }
 
-    @ExceptionHandler(saas.com.br.resume_ai_saas.user.exception.EmailAlreadyRegisteredException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of(ex.getMessage(), 409));
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<Map<String, String>> handleJwtException(JwtException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "Token inválido ou expirado"));
     }
 
     @ExceptionHandler(RuntimeException.class)

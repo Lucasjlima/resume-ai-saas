@@ -9,8 +9,10 @@ import org.springframework.web.multipart.MultipartFile;
 import saas.com.br.resume_ai_saas.resume.dto.response.ResumeResponse;
 import saas.com.br.resume_ai_saas.resume.mapper.ResumeMapper;
 import saas.com.br.resume_ai_saas.resume.service.ResumeService;
+import saas.com.br.resume_ai_saas.security.AuthenticatedUser;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/resumes")
@@ -20,7 +22,8 @@ public class ResumeController {
     private final ResumeService resumeService;
 
     @GetMapping
-    public ResponseEntity<List<ResumeResponse>> findByUser(@RequestParam Long userId) {
+    public ResponseEntity<List<ResumeResponse>> findByUser() {
+        UUID userId = AuthenticatedUser.getId();
         List<ResumeResponse> responses = resumeService.findByUserId(userId).stream()
                 .map(ResumeMapper::toResponse)
                 .toList();
@@ -33,8 +36,8 @@ public class ResumeController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResumeResponse> upload(@RequestParam Long userId,
-                                                  @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ResumeResponse> upload(@RequestParam("file") MultipartFile file) {
+        UUID userId = AuthenticatedUser.getId();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResumeMapper.toResponse(resumeService.upload(userId, file)));
     }
