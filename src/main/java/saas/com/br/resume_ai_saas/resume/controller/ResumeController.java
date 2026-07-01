@@ -6,11 +6,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import saas.com.br.resume_ai_saas.resume.dto.response.ResumeDownloadResponse;
 import saas.com.br.resume_ai_saas.resume.dto.response.ResumeResponse;
 import saas.com.br.resume_ai_saas.resume.mapper.ResumeMapper;
 import saas.com.br.resume_ai_saas.resume.service.ResumeService;
 import saas.com.br.resume_ai_saas.security.AuthenticatedUser;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +20,8 @@ import java.util.UUID;
 @RequestMapping("/api/resumes")
 @RequiredArgsConstructor
 public class ResumeController {
+
+    private static final Duration PRESIGN_TTL = Duration.ofMinutes(5);
 
     private final ResumeService resumeService;
 
@@ -31,8 +35,14 @@ public class ResumeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ResumeResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<ResumeResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(ResumeMapper.toResponse(resumeService.findById(id)));
+    }
+
+    @GetMapping("/{id}/download-url")
+    public ResponseEntity<ResumeDownloadResponse> getDownloadUrl(@PathVariable UUID id) {
+        String url = resumeService.generatePresignedDownloadUrl(id, PRESIGN_TTL);
+        return ResponseEntity.ok(new ResumeDownloadResponse(url, PRESIGN_TTL.toSeconds()));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -43,7 +53,7 @@ public class ResumeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
         resumeService.delete(id);
         return ResponseEntity.noContent().build();
     }

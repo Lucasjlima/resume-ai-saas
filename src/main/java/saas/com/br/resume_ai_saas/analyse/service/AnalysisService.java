@@ -11,10 +11,12 @@ import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
 import saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException;
 import saas.com.br.resume_ai_saas.analyse.mapper.AnalysisMapper;
 import saas.com.br.resume_ai_saas.analyse.repository.AnalysisRepository;
+import saas.com.br.resume_ai_saas.exception.ResumeNotFoundException;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -36,7 +38,7 @@ public class AnalysisService {
     }
 
     @Transactional(readOnly = true)
-    public List<Analysis> findByResumeId(Long resumeId) {
+    public List<Analysis> findByResumeId(UUID resumeId) {
         return analysisRepository.findByResumeId(resumeId);
     }
 
@@ -46,7 +48,7 @@ public class AnalysisService {
                 .orElseThrow(() -> new AnalysisNotFoundException(id));
     }
 
-    public Analysis analyze(Long resumeId, String jobDescription) {
+    public Analysis analyze(UUID resumeId, String jobDescription) {
         Analysis analysis = self.initializeAnalysis(resumeId, jobDescription);
         self.runAiAnalysisAsync(analysis);
         return analysis;
@@ -71,9 +73,9 @@ public class AnalysisService {
     }
 
     @Transactional
-    public Analysis initializeAnalysis(Long resumeId, String jobDescription) {
+    public Analysis initializeAnalysis(UUID resumeId, String jobDescription) {
         Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new RuntimeException("Resume not found with id: " + resumeId));
+                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
 
         Analysis analysis = AnalysisMapper.toPendingAnalysis(resume, jobDescription);
         return analysisRepository.save(analysis);

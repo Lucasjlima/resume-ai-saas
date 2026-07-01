@@ -6,6 +6,6 @@ import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import java.util.List;
 import java.util.UUID;
 
-public interface ResumeRepository extends JpaRepository<Resume, Long> {
+public interface ResumeRepository extends JpaRepository<Resume, UUID> {
     List<Resume> findByUserId(UUID userId);
 }

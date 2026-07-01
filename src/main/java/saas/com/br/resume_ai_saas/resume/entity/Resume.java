@@ -19,8 +19,8 @@ import java.util.UUID;
 public class Resume {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -28,8 +28,8 @@ public class Resume {
     @Column(name = "file_name", nullable = false)
     private String fileName;
 
-    @Column(name = "file_url", nullable = false)
-    private String fileUrl;
+    @Column(name = "storage_key", length = 512)
+    private String storageKey;
 
     @Column(name = "raw_text", columnDefinition = "TEXT")
     private String rawText;
