@@ -1,6 +1,6 @@
 package saas.com.br.resume_ai_saas.exception;
 
-import io.jsonwebtoken.JwtException;
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-            saas.com.br.resume_ai_saas.resume.exception.ResumeNotFoundException.class,
+            ResumeNotFoundException.class,
             saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
@@ -31,8 +31,8 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ex.getMessage(), 404));
     }
 
-    @ExceptionHandler(JwtException.class)
-    public ResponseEntity<Map<String, String>> handleJwtException(JwtException ex) {
+    @ExceptionHandler(JWTVerificationException.class)
+    public ResponseEntity<Map<String, String>> handleJwtException(JWTVerificationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "Token inválido ou expirado"));
     }

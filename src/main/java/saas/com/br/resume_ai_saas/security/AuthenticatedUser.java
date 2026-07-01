@@ -1,19 +1,22 @@
 package saas.com.br.resume_ai_saas.security;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.UUID;
-
+@RequiredArgsConstructor
 public final class AuthenticatedUser {
-
-    private AuthenticatedUser() {}
 
     public static UUID getId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new IllegalStateException("No authenticated user in security context");
         }
-        return UUID.fromString((String) authentication.getPrincipal());
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof SupabaseUserDetails details)) {
+            throw new IllegalStateException("Unexpected principal type: " + principal.getClass());
+        }
+        return UUID.fromString(details.userId());
     }
 }

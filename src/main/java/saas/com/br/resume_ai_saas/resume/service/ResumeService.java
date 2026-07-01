@@ -9,7 +9,7 @@ import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import saas.com.br.resume_ai_saas.resume.entity.ResumeStatus;
-import saas.com.br.resume_ai_saas.resume.exception.ResumeNotFoundException;
+import saas.com.br.resume_ai_saas.exception.ResumeNotFoundException;
 import saas.com.br.resume_ai_saas.resume.mapper.ResumeMapper;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 
