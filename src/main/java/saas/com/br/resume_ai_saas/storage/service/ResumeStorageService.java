@@ -1,8 +1,8 @@
 package saas.com.br.resume_ai_saas.storage.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import saas.com.br.resume_ai_saas.storage.config.SupabaseStorageProperties;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -35,14 +35,13 @@ public class ResumeStorageService {
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
-    private final String bucket;
 
-    public ResumeStorageService(S3Client s3Client,
-                                S3Presigner s3Presigner,
-                                SupabaseStorageProperties properties) {
+    @Value("${supabase.storage.bucket}")
+    private String bucket;
+
+    public ResumeStorageService(S3Client s3Client, S3Presigner s3Presigner) {
         this.s3Client = s3Client;
         this.s3Presigner = s3Presigner;
-        this.bucket = properties.bucket();
     }
 
     public String upload(UUID userId, UUID resumeId, byte[] pdfBytes) {
