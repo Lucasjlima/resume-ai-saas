@@ -1,31 +1,23 @@
 package saas.com.br.resume_ai_saas.storage.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.Delete;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
-import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class ResumeStorageService {
 
@@ -39,10 +31,6 @@ public class ResumeStorageService {
     @Value("${supabase.storage.bucket}")
     private String bucket;
 
-    public ResumeStorageService(S3Client s3Client, S3Presigner s3Presigner) {
-        this.s3Client = s3Client;
-        this.s3Presigner = s3Presigner;
-    }
 
     public String upload(UUID userId, UUID resumeId, byte[] pdfBytes) {
         String key = buildKey(userId, resumeId);
@@ -89,48 +77,21 @@ public class ResumeStorageService {
 
     public void deleteAllForUser(UUID userId) {
         String prefix = "resumes/" + userId + "/";
-        String continuationToken = null;
+        List<ObjectIdentifier> keys = s3Client.listObjectsV2Paginator(b -> b.bucket(bucket).prefix(prefix))
+                .contents().stream()
+                .map(obj -> ObjectIdentifier.builder().key(obj.key()).build())
+                .toList();
 
-        do {
-            ListObjectsV2Request.Builder listBuilder = ListObjectsV2Request.builder()
-                    .bucket(bucket)
-                    .prefix(prefix);
-            if (continuationToken != null) {
-                listBuilder.continuationToken(continuationToken);
-            }
-            ListObjectsV2Response listResponse = s3Client.listObjectsV2(listBuilder.build());
-
-            List<S3Object> contents = listResponse.contents();
-            if (!contents.isEmpty()) {
-                deleteInBatches(contents);
-            }
-
-            continuationToken = Boolean.TRUE.equals(listResponse.isTruncated())
-                    ? listResponse.nextContinuationToken()
-                    : null;
-        } while (continuationToken != null);
-    }
-
-    private void deleteInBatches(List<S3Object> contents) {
-        List<ObjectIdentifier> batch = new ArrayList<>(DELETE_BATCH_SIZE);
-        for (S3Object object : contents) {
-            batch.add(ObjectIdentifier.builder().key(object.key()).build());
-            if (batch.size() == DELETE_BATCH_SIZE) {
-                flushDeleteBatch(batch);
-                batch.clear();
+        if (!keys.isEmpty()) {
+            for (int i = 0; i < keys.size(); i += DELETE_BATCH_SIZE) {
+                List<ObjectIdentifier> subList = keys.subList(i, Math.min(i + DELETE_BATCH_SIZE, keys.size()));
+                DeleteObjectsRequest request = DeleteObjectsRequest.builder()
+                        .bucket(bucket)
+                        .delete(Delete.builder().objects(subList).build())
+                        .build();
+                s3Client.deleteObjects(request);
             }
         }
-        if (!batch.isEmpty()) {
-            flushDeleteBatch(batch);
-        }
-    }
-
-    private void flushDeleteBatch(List<ObjectIdentifier> batch) {
-        DeleteObjectsRequest request = DeleteObjectsRequest.builder()
-                .bucket(bucket)
-                .delete(Delete.builder().objects(batch).build())
-                .build();
-        s3Client.deleteObjects(request);
     }
 
     private String buildKey(UUID userId, UUID resumeId) {

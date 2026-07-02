@@ -1,10 +1,10 @@
 package saas.com.br.resume_ai_saas.analyse.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StopWatch;
 import saas.com.br.resume_ai_saas.analyse.dto.response.AiAnalysisResult;
 import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
@@ -14,9 +14,13 @@ import saas.com.br.resume_ai_saas.analyse.repository.AnalysisRepository;
 import saas.com.br.resume_ai_saas.exception.ResumeNotFoundException;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
+import org.springframework.security.access.AccessDeniedException;
+import saas.com.br.resume_ai_saas.security.AuthenticatedUser;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
 @Slf4j
@@ -25,36 +29,57 @@ public class AnalysisService {
     private final AnalysisRepository analysisRepository;
     private final ResumeRepository resumeRepository;
     private final AiAnalysisService aiAnalysisService;
-    private final AnalysisService self;
+    private final Executor executor;
+    private final TransactionTemplate transactionTemplate;
 
     public AnalysisService(AnalysisRepository analysisRepository,
                            ResumeRepository resumeRepository,
                            AiAnalysisService aiAnalysisService,
-                           @Lazy AnalysisService self) {
+                           @Qualifier("applicationTaskExecutor") Executor executor,
+                           TransactionTemplate transactionTemplate) {
         this.analysisRepository = analysisRepository;
         this.resumeRepository = resumeRepository;
         this.aiAnalysisService = aiAnalysisService;
-        this.self = self;
+        this.executor = executor;
+        this.transactionTemplate = transactionTemplate;
     }
+    
 
     @Transactional(readOnly = true)
     public List<Analysis> findByResumeId(UUID resumeId) {
+        Resume resume = resumeRepository.findById(resumeId)
+                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
+        UUID currentUserId = AuthenticatedUser.getId();
+        if (!resume.getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("You do not have permission to access this resume's analyses");
+        }
         return analysisRepository.findByResumeId(resumeId);
     }
 
     @Transactional(readOnly = true)
     public Analysis findById(Long id) {
-        return analysisRepository.findById(id)
+        Analysis analysis = analysisRepository.findById(id)
                 .orElseThrow(() -> new AnalysisNotFoundException(id));
-    }
-
-    public Analysis analyze(UUID resumeId, String jobDescription) {
-        Analysis analysis = self.initializeAnalysis(resumeId, jobDescription);
-        self.runAiAnalysisAsync(analysis);
+        UUID currentUserId = AuthenticatedUser.getId();
+        if (!analysis.getResume().getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("You do not have permission to access this analysis");
+        }
         return analysis;
     }
 
-    @Async
+    public Analysis analyze(UUID resumeId, String jobDescription) {
+        Resume resume = resumeRepository.findById(resumeId)
+                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
+        UUID currentUserId = AuthenticatedUser.getId();
+        if (!resume.getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("You do not have permission to analyze this resume");
+        }
+        Analysis analysis = initializeAnalysis(resumeId, jobDescription);
+        final Analysis finalAnalysis = analysis;
+        CompletableFuture.runAsync(() -> runAiAnalysisAsync(finalAnalysis), executor);
+        return analysis;
+    }
+
     public void runAiAnalysisAsync(Analysis analysis) {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
@@ -63,35 +88,40 @@ public class AnalysisService {
         try {
             AiAnalysisResult result =
                     aiAnalysisService.analyze(analysis.getResume().getRawText(), analysis.getJobDescription());
-            self.completeAnalysisWithSuccess(analysis.getId(), result);
+            completeAnalysisWithSuccess(analysis.getId(), result);
             stopWatch.stop();
             log.info("[Análise {}] Finalizada com SUCESSO em {} segundos ({} ms)",
                     analysis.getId(), stopWatch.getTotalTimeSeconds(), stopWatch.getTotalTimeMillis());
         } catch (Exception e) {
-            self.completeAnalysisWithFailure(analysis.getId(), e);
+            completeAnalysisWithFailure(analysis.getId(), e);
         }
     }
 
-    @Transactional
     public Analysis initializeAnalysis(UUID resumeId, String jobDescription) {
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
+        return transactionTemplate.execute(status -> {
+            Resume resume = resumeRepository.findById(resumeId)
+                    .orElseThrow(() -> new ResumeNotFoundException(resumeId));
 
-        Analysis analysis = AnalysisMapper.toPendingAnalysis(resume, jobDescription);
-        return analysisRepository.save(analysis);
+            Analysis analysis = AnalysisMapper.toPendingAnalysis(resume, jobDescription);
+            return analysisRepository.save(analysis);
+        });
     }
 
-    @Transactional
     public void completeAnalysisWithSuccess(Long analysisId, AiAnalysisResult result) {
-        Analysis analysis = analysisRepository.findById(analysisId)
-                .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
-        AnalysisMapper.applySuccess(analysis, result);
+        transactionTemplate.executeWithoutResult(status -> {
+            Analysis analysis = analysisRepository.findById(analysisId)
+                    .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
+            AnalysisMapper.applySuccess(analysis, result);
+            analysisRepository.save(analysis);
+        });
     }
 
-    @Transactional
     public void completeAnalysisWithFailure(Long analysisId, Exception error) {
-        Analysis analysis = analysisRepository.findById(analysisId)
-                .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
-        AnalysisMapper.applyFailure(analysis, error);
+        transactionTemplate.executeWithoutResult(status -> {
+            Analysis analysis = analysisRepository.findById(analysisId)
+                    .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
+            AnalysisMapper.applyFailure(analysis, error);
+            analysisRepository.save(analysis);
+        });
     }
 }

@@ -1,10 +1,10 @@
 package saas.com.br.resume_ai_saas.resume.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 import saas.com.br.resume_ai_saas.exception.ResumeNotFoundException;
@@ -13,10 +13,15 @@ import saas.com.br.resume_ai_saas.resume.entity.ResumeStatus;
 import saas.com.br.resume_ai_saas.resume.mapper.ResumeMapper;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 import saas.com.br.resume_ai_saas.storage.service.ResumeStorageService;
+import org.springframework.security.access.AccessDeniedException;
+import saas.com.br.resume_ai_saas.security.AuthenticatedUser;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
 
 @Service
 @Slf4j
@@ -26,18 +31,21 @@ public class ResumeService {
     private final ResumeStorageService storageService;
     private final ResumeTextExtractionService textExtractionService;
     private final ResumeTextRefinementService textRefinementService;
-    private final ResumeService self;
+    private final Executor executor;
+    private final TransactionTemplate transactionTemplate;
 
     public ResumeService(ResumeRepository resumeRepository,
                          ResumeStorageService storageService,
                          ResumeTextExtractionService textExtractionService,
                          ResumeTextRefinementService textRefinementService,
-                         @Lazy ResumeService self) {
+                         @Qualifier("applicationTaskExecutor") Executor executor,
+                         TransactionTemplate transactionTemplate) {
         this.resumeRepository = resumeRepository;
         this.storageService = storageService;
         this.textExtractionService = textExtractionService;
         this.textRefinementService = textRefinementService;
-        this.self = self;
+        this.executor = executor;
+        this.transactionTemplate = transactionTemplate;
     }
 
     public Resume upload(UUID userId, MultipartFile file) {
@@ -51,44 +59,26 @@ public class ResumeService {
 
         String rawText = textExtractionService.extract(fileBytes, originalFilename);
 
-        Resume resume = self.saveInitialResume(userId, originalFilename, rawText);
+        Resume resume = ResumeMapper.toEntity(userId, originalFilename, rawText);
+        resume = resumeRepository.save(resume);
 
         try {
             String storageKey = storageService.upload(userId, resume.getId(), fileBytes);
-            self.updateStorageKey(resume.getId(), storageKey);
             resume.setStorageKey(storageKey);
+            resume = resumeRepository.save(resume);
         } catch (Exception e) {
             log.error("Failed to upload resume file to storage for Resume ID: {}", resume.getId(), e);
-            self.markFileUploadFailed(resume.getId());
             resume.setStatus(ResumeStatus.FILE_UPLOAD_FAILED);
+            resume = resumeRepository.save(resume);
         }
 
-        self.processResumeBackground(resume.getId(), rawText);
+        final UUID resumeId = resume.getId();
+        final String rawTextToRefine = rawText;
+        CompletableFuture.runAsync(() -> processResumeBackground(resumeId, rawTextToRefine), executor);
 
         return resume;
     }
 
-    @Transactional
-    public Resume saveInitialResume(UUID userId, String fileName, String rawText) {
-        Resume resume = ResumeMapper.toEntity(userId, fileName, rawText);
-        return resumeRepository.save(resume);
-    }
-
-    @Transactional
-    public void updateStorageKey(UUID resumeId, String storageKey) {
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
-        resume.setStorageKey(storageKey);
-    }
-
-    @Transactional
-    public void markFileUploadFailed(UUID resumeId) {
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
-        resume.setStatus(ResumeStatus.FILE_UPLOAD_FAILED);
-    }
-
-    @Async
     public void processResumeBackground(UUID resumeId, String rawText) {
         log.info("Starting async background refinement for Resume ID: {}", resumeId);
         StopWatch stopWatch = new StopWatch("Resume Refinement Metrics - ID: " + resumeId);
@@ -99,7 +89,7 @@ public class ResumeService {
             stopWatch.stop();
 
             stopWatch.start("Database Update & Persistence");
-            self.updateRefinedText(resumeId, refinedText, ResumeStatus.COMPLETED);
+            updateRefinedText(resumeId, refinedText, ResumeStatus.COMPLETED);
             stopWatch.stop();
 
             log.info("Async refinement completed successfully!\n{}", stopWatch.prettyPrint());
@@ -107,23 +97,25 @@ public class ResumeService {
         } catch (Exception e) {
             log.error("Failed to complete async resume refinement for ID: {}", resumeId, e);
             try {
-                self.updateRefinedText(resumeId, null, ResumeStatus.FAILED);
+                updateRefinedText(resumeId, null, ResumeStatus.FAILED);
             } catch (Exception ex) {
                 log.error("Failed to mark resume status as FAILED in DB for ID: {}", resumeId, ex);
             }
         }
     }
 
-    @Transactional
     public void updateRefinedText(UUID resumeId, String refinedText, ResumeStatus status) {
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
-        if (refinedText != null) {
-            resume.setRawText(refinedText);
-        }
-        if (resume.getStatus() != ResumeStatus.FILE_UPLOAD_FAILED) {
-            resume.setStatus(status);
-        }
+        transactionTemplate.executeWithoutResult(ts -> {
+            Resume resume = resumeRepository.findById(resumeId)
+                    .orElseThrow(() -> new ResumeNotFoundException(resumeId));
+            if (refinedText != null) {
+                resume.setRawText(refinedText);
+            }
+            if (resume.getStatus() != ResumeStatus.FILE_UPLOAD_FAILED) {
+                resume.setStatus(status);
+            }
+            resumeRepository.save(resume);
+        });
     }
 
     @Transactional(readOnly = true)
@@ -133,8 +125,13 @@ public class ResumeService {
 
     @Transactional(readOnly = true)
     public Resume findById(UUID id) {
-        return resumeRepository.findById(id)
+        Resume resume = resumeRepository.findById(id)
                 .orElseThrow(() -> new ResumeNotFoundException(id));
+        UUID currentUserId = AuthenticatedUser.getId();
+        if (!resume.getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("You do not have permission to access this resume");
+        }
+        return resume;
     }
 
     public byte[] downloadRawPdf(UUID id) {
@@ -155,8 +152,7 @@ public class ResumeService {
 
     @Transactional
     public void delete(UUID id) {
-        Resume resume = resumeRepository.findById(id)
-                .orElseThrow(() -> new ResumeNotFoundException(id));
+        Resume resume = findById(id);
         if (resume.getStorageKey() != null) {
             try {
                 storageService.delete(resume.getStorageKey());
@@ -169,13 +165,9 @@ public class ResumeService {
         resumeRepository.delete(resume);
     }
 
+    @Transactional
     public void deleteAllForUser(UUID userId) {
         storageService.deleteAllForUser(userId);
-        self.deleteAllRowsForUser(userId);
-    }
-
-    @Transactional
-    public void deleteAllRowsForUser(UUID userId) {
         List<Resume> resumes = resumeRepository.findByUserId(userId);
         resumeRepository.deleteAll(resumes);
     }

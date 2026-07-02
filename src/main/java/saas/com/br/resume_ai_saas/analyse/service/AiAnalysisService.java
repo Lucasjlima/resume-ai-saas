@@ -1,7 +1,6 @@
 package saas.com.br.resume_ai_saas.analyse.service;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
 import org.springframework.stereotype.Service;
 import saas.com.br.resume_ai_saas.analyse.dto.response.AiAnalysisResult;
@@ -10,8 +9,6 @@ import saas.com.br.resume_ai_saas.analyse.dto.response.AiAnalysisResult;
 public class AiAnalysisService {
 
     private final ChatClient chatClient;
-    private final BeanOutputConverter<AiAnalysisResult> outputConverter =
-            new BeanOutputConverter<>(AiAnalysisResult.class);
 
     public AiAnalysisService(ChatClient.Builder chatClientBuilder) {
         GoogleGenAiChatOptions.Builder options = GoogleGenAiChatOptions.builder()
@@ -63,8 +60,6 @@ public class AiAnalysisService {
                 
                 JOB DESCRIPTION:
                 {jobDescription}
-                
-                {format}
                 """;
 
         AiAnalysisResult result = chatClient.prompt()
@@ -73,10 +68,9 @@ public class AiAnalysisService {
                         .param("currentYear", currentYear)
                         .param("resumeText", resumeText)
                         .param("jobDescription", jobDescription)
-                        .param("format", outputConverter.getFormat())
                 )
                 .call()
-                .entity(outputConverter);
+                .entity(AiAnalysisResult.class);
 
         // 2. O Java assume o cálculo da média ponderada de forma instantânea e 100% precisa
         int calculatedOverallScore = (int) Math.round(
