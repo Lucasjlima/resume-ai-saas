@@ -2,6 +2,8 @@ package saas.com.br.resume_ai_saas.resume.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -15,6 +17,7 @@ import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 import saas.com.br.resume_ai_saas.storage.service.ResumeStorageService;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -117,46 +120,48 @@ public class ResumeService {
     }
 
     @Transactional(readOnly = true)
-    public List<Resume> findByUserId(UUID userId) {
-        return resumeRepository.findByUserId(userId);
+    public Page<Resume> findByUserId(UUID userId, Pageable pageable) {
+        return resumeRepository.findByUserIdAndDeletedAtIsNull(userId, pageable);
     }
 
+    /**
+     * Owner-scoped lookup. Throws {@link ResumeNotFoundException} (404) both when
+     * the resume does not exist and when it belongs to another user, so IDOR
+     * attempts are rejected before any Storage/S3 call is made.
+     */
     @Transactional(readOnly = true)
-    public Resume findById(UUID id) {
-        return resumeRepository.findById(id)
+    public Resume findByIdForUser(UUID id, UUID userId) {
+        return resumeRepository.findByIdAndUserIdAndDeletedAtIsNull(id, userId)
                 .orElseThrow(() -> new ResumeNotFoundException(id));
     }
 
-    public byte[] downloadRawPdf(UUID id) {
-        Resume resume = findById(id);
+    public byte[] downloadRawPdf(UUID id, UUID userId) {
+        Resume resume = findByIdForUser(id, userId);
         if (resume.getStorageKey() == null) {
             throw new IllegalStateException("Resume has no stored file: " + id);
         }
         return storageService.download(resume.getStorageKey());
     }
 
-    public String generatePresignedDownloadUrl(UUID id, Duration ttl) {
-        Resume resume = findById(id);
+    public String generatePresignedDownloadUrl(UUID id, UUID userId, Duration ttl) {
+        Resume resume = findByIdForUser(id, userId);
         if (resume.getStorageKey() == null) {
             throw new IllegalStateException("Resume has no stored file: " + id);
         }
         return storageService.generatePresignedDownloadUrl(resume.getStorageKey(), ttl);
     }
 
+    /**
+     * Soft-deletes a resume owned by {@code userId} by stamping {@code deletedAt}.
+     * The Storage object is intentionally retained. Ownership is enforced by the
+     * scoped query, so a cross-user delete resolves to 404.
+     */
     @Transactional
-    public void delete(UUID id) {
-        Resume resume = resumeRepository.findById(id)
+    public void softDelete(UUID id, UUID userId) {
+        Resume resume = resumeRepository.findByIdAndUserIdAndDeletedAtIsNull(id, userId)
                 .orElseThrow(() -> new ResumeNotFoundException(id));
-        if (resume.getStorageKey() != null) {
-            try {
-                storageService.delete(resume.getStorageKey());
-            } catch (Exception e) {
-                log.error("Failed to delete storage object for Resume ID: {} (key={})",
-                        id, resume.getStorageKey(), e);
-                throw e;
-            }
-        }
-        resumeRepository.delete(resume);
+        resume.setDeletedAt(Instant.now());
+        resumeRepository.save(resume);
     }
 
     @Transactional

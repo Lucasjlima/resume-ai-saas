@@ -37,6 +37,9 @@ public class Resume {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "extraction_method", nullable = false)
     private ExtractionMethod extractionMethod;
