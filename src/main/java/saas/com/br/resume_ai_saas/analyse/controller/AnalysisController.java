@@ -11,6 +11,7 @@ import saas.com.br.resume_ai_saas.analyse.mapper.AnalysisMapper;
 import saas.com.br.resume_ai_saas.analyse.service.AnalysisService;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/analyses")
@@ -20,7 +21,7 @@ public class AnalysisController {
     private final AnalysisService analysisService;
 
     @GetMapping
-    public ResponseEntity<List<AnalysisResponse>> findByResume(@RequestParam Long resumeId) {
+    public ResponseEntity<List<AnalysisResponse>> findByResume(@RequestParam UUID resumeId) {
         List<AnalysisResponse> responses = analysisService.findByResumeId(resumeId).stream()
                 .map(AnalysisMapper::toResponse)
                 .toList();
@@ -33,7 +34,7 @@ public class AnalysisController {
     }
 
     @PostMapping
-    public ResponseEntity<AnalysisResponse> analyze(@RequestParam Long resumeId,
+    public ResponseEntity<AnalysisResponse> analyze(@RequestParam UUID resumeId,
                                                      @Valid @RequestBody AnalysisRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(AnalysisMapper.toResponse(

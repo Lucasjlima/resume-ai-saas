@@ -24,7 +24,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.net.URL;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.security.interfaces.ECPublicKey;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -35,8 +36,8 @@ public class SupabaseJwtFilter extends OncePerRequestFilter {
 
     private final JwkProvider jwkProvider;
 
-    public SupabaseJwtFilter(@Value("${supabase.url}") String supabaseUrl) throws Exception {
-        this.jwkProvider = new JwkProviderBuilder(new URL(supabaseUrl + "/auth/v1/.well-known/jwks.json"))
+    public SupabaseJwtFilter(@Value("${supabase.url}") String supabaseUrl) throws MalformedURLException {
+        this.jwkProvider = new JwkProviderBuilder(URI.create(supabaseUrl + "/auth/v1/.well-known/jwks.json").toURL())
                 .cached(10, 24, TimeUnit.HOURS)
                 .rateLimited(10, 1, TimeUnit.MINUTES)
                 .build();

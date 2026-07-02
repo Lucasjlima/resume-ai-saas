@@ -1,11 +1,10 @@
 package saas.com.br.resume_ai_saas.security;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.UUID;
-@RequiredArgsConstructor
+
 public final class AuthenticatedUser {
 
     public static UUID getId() {
