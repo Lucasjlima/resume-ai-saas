@@ -13,8 +13,6 @@ import saas.com.br.resume_ai_saas.resume.entity.ResumeStatus;
 import saas.com.br.resume_ai_saas.resume.mapper.ResumeMapper;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 import saas.com.br.resume_ai_saas.storage.service.ResumeStorageService;
-import org.springframework.security.access.AccessDeniedException;
-import saas.com.br.resume_ai_saas.security.AuthenticatedUser;
 
 import java.time.Duration;
 import java.util.List;
@@ -125,13 +123,8 @@ public class ResumeService {
 
     @Transactional(readOnly = true)
     public Resume findById(UUID id) {
-        Resume resume = resumeRepository.findById(id)
+        return resumeRepository.findById(id)
                 .orElseThrow(() -> new ResumeNotFoundException(id));
-        UUID currentUserId = AuthenticatedUser.getId();
-        if (!resume.getUserId().equals(currentUserId)) {
-            throw new AccessDeniedException("You do not have permission to access this resume");
-        }
-        return resume;
     }
 
     public byte[] downloadRawPdf(UUID id) {
@@ -152,7 +145,8 @@ public class ResumeService {
 
     @Transactional
     public void delete(UUID id) {
-        Resume resume = findById(id);
+        Resume resume = resumeRepository.findById(id)
+                .orElseThrow(() -> new ResumeNotFoundException(id));
         if (resume.getStorageKey() != null) {
             try {
                 storageService.delete(resume.getStorageKey());

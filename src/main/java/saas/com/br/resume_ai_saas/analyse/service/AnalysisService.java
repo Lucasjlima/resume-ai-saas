@@ -14,8 +14,6 @@ import saas.com.br.resume_ai_saas.analyse.repository.AnalysisRepository;
 import saas.com.br.resume_ai_saas.exception.ResumeNotFoundException;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
-import org.springframework.security.access.AccessDeniedException;
-import saas.com.br.resume_ai_saas.security.AuthenticatedUser;
 
 import java.util.List;
 import java.util.UUID;
@@ -47,33 +45,16 @@ public class AnalysisService {
 
     @Transactional(readOnly = true)
     public List<Analysis> findByResumeId(UUID resumeId) {
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
-        UUID currentUserId = AuthenticatedUser.getId();
-        if (!resume.getUserId().equals(currentUserId)) {
-            throw new AccessDeniedException("You do not have permission to access this resume's analyses");
-        }
         return analysisRepository.findByResumeId(resumeId);
     }
 
     @Transactional(readOnly = true)
     public Analysis findById(Long id) {
-        Analysis analysis = analysisRepository.findById(id)
+        return analysisRepository.findById(id)
                 .orElseThrow(() -> new AnalysisNotFoundException(id));
-        UUID currentUserId = AuthenticatedUser.getId();
-        if (!analysis.getResume().getUserId().equals(currentUserId)) {
-            throw new AccessDeniedException("You do not have permission to access this analysis");
-        }
-        return analysis;
     }
 
     public Analysis analyze(UUID resumeId, String jobDescription) {
-        Resume resume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResumeNotFoundException(resumeId));
-        UUID currentUserId = AuthenticatedUser.getId();
-        if (!resume.getUserId().equals(currentUserId)) {
-            throw new AccessDeniedException("You do not have permission to analyze this resume");
-        }
         Analysis analysis = initializeAnalysis(resumeId, jobDescription);
         final Analysis finalAnalysis = analysis;
         CompletableFuture.runAsync(() -> runAiAnalysisAsync(finalAnalysis), executor);
