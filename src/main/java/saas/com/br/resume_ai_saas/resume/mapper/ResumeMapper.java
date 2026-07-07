@@ -1,6 +1,7 @@
 package saas.com.br.resume_ai_saas.resume.mapper;
 
 import saas.com.br.resume_ai_saas.resume.dto.response.ResumeResponse;
+import saas.com.br.resume_ai_saas.resume.dto.response.ResumeSummaryResponse;
 import saas.com.br.resume_ai_saas.resume.entity.ExtractionMethod;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import saas.com.br.resume_ai_saas.resume.entity.ResumeStatus;
@@ -18,6 +19,16 @@ public final class ResumeMapper {
                 resume.getUserId(),
                 resume.getFileName(),
                 resume.getRawText(),
+                resume.getStatus(),
+                resume.getExtractionMethod(),
+                resume.getCreatedAt()
+        );
+    }
+
+    public static ResumeSummaryResponse toSummary(Resume resume) {
+        return new ResumeSummaryResponse(
+                resume.getId(),
+                resume.getFileName(),
                 resume.getStatus(),
                 resume.getExtractionMethod(),
                 resume.getCreatedAt()

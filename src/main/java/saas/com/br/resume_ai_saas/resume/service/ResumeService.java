@@ -2,6 +2,8 @@ package saas.com.br.resume_ai_saas.resume.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -105,7 +107,7 @@ public class ResumeService {
     public void updateRefinedText(UUID resumeId, String refinedText, ResumeStatus status) {
         transactionTemplate.executeWithoutResult(ts -> {
             Resume resume = resumeRepository.findById(resumeId)
-                    .orElseThrow(() -> new ResumeNotFoundException(resumeId));
+                    .orElseThrow(ResumeNotFoundException::new);
             if (refinedText != null) {
                 resume.setRawText(refinedText);
             }
@@ -117,26 +119,26 @@ public class ResumeService {
     }
 
     @Transactional(readOnly = true)
-    public List<Resume> findByUserId(UUID userId) {
-        return resumeRepository.findByUserId(userId);
+    public Page<Resume> findByUserId(UUID userId, Pageable pageable) {
+        return resumeRepository.findByUserId(userId, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Resume findById(UUID id) {
-        return resumeRepository.findById(id)
-                .orElseThrow(() -> new ResumeNotFoundException(id));
+    public Resume findByIdForUser(UUID id, UUID userId) {
+        return resumeRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(ResumeNotFoundException::new);
     }
 
-    public byte[] downloadRawPdf(UUID id) {
-        Resume resume = findById(id);
+    public byte[] downloadRawPdf(UUID id, UUID userId) {
+        Resume resume = findByIdForUser(id, userId);
         if (resume.getStorageKey() == null) {
             throw new IllegalStateException("Resume has no stored file: " + id);
         }
         return storageService.download(resume.getStorageKey());
     }
 
-    public String generatePresignedDownloadUrl(UUID id, Duration ttl) {
-        Resume resume = findById(id);
+    public String generatePresignedDownloadUrl(UUID id, UUID userId, Duration ttl) {
+        Resume resume = findByIdForUser(id, userId);
         if (resume.getStorageKey() == null) {
             throw new IllegalStateException("Resume has no stored file: " + id);
         }
@@ -144,17 +146,11 @@ public class ResumeService {
     }
 
     @Transactional
-    public void delete(UUID id) {
-        Resume resume = resumeRepository.findById(id)
-                .orElseThrow(() -> new ResumeNotFoundException(id));
+    public void delete(UUID id, UUID userId) {
+        Resume resume = resumeRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(ResumeNotFoundException::new);
         if (resume.getStorageKey() != null) {
-            try {
-                storageService.delete(resume.getStorageKey());
-            } catch (Exception e) {
-                log.error("Failed to delete storage object for Resume ID: {} (key={})",
-                        id, resume.getStorageKey(), e);
-                throw e;
-            }
+            storageService.delete(resume.getStorageKey());
         }
         resumeRepository.delete(resume);
     }
