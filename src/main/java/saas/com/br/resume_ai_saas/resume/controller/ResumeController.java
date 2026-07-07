@@ -25,16 +25,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/resumes")
 @RequiredArgsConstructor
-public class ResumeController {
+public class  ResumeController {
 
     private static final Duration PRESIGN_TTL = Duration.ofMinutes(5);
 
     private final ResumeService resumeService;
 
-    /**
-     * Lists the authenticated user's active resumes, paginated. Returns a
-     * lightweight summary DTO (metadata only, no extracted text).
-     */
     @GetMapping
     public ResponseEntity<PageResponse<ResumeSummaryResponse>> findByUser(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -44,11 +40,6 @@ public class ResumeController {
         return ResponseEntity.ok(PageResponse.from(page));
     }
 
-    /**
-     * Returns a single resume only if it belongs to the authenticated user;
-     * otherwise 404 (the service scopes the lookup by userId, so existence is
-     * not leaked and no Storage call is reached).
-     */
     @GetMapping("/{id}")
     public ResponseEntity<ResumeResponse> findById(@PathVariable UUID id) {
         UUID userId = AuthenticatedUser.getId();
@@ -56,7 +47,7 @@ public class ResumeController {
     }
 
     @GetMapping("/{id}/download-url")
-    public ResponseEntity<ResumeDownloadResponse> getDownloadUrl(@PathVariable UUID id) {
+    public ResponseEntity<ResumeDownloadResponse> getDownloadUrl(@PathVariable UUID id) throws Exception {
         UUID userId = AuthenticatedUser.getId();
         String url = resumeService.generatePresignedDownloadUrl(id, userId, PRESIGN_TTL);
         return ResponseEntity.ok(new ResumeDownloadResponse(url, PRESIGN_TTL.toSeconds()));
@@ -69,16 +60,11 @@ public class ResumeController {
                 .body(ResumeMapper.toResponse(resumeService.upload(userId, file)));
     }
 
-    /**
-     * Soft-deletes a resume. {@code @PreAuthorize} rejects non-owners with 403
-     * before the controller body runs; the service additionally scopes the
-     * delete by userId as defense in depth.
-     */
     @DeleteMapping("/{id}")
     @PreAuthorize("@resumeSecurity.isOwner(#id)")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         UUID userId = AuthenticatedUser.getId();
-        resumeService.softDelete(id, userId);
+        resumeService.delete(id, userId);
         return ResponseEntity.noContent().build();
     }
 }

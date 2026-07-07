@@ -17,7 +17,6 @@ import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 import saas.com.br.resume_ai_saas.storage.service.ResumeStorageService;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -108,7 +107,7 @@ public class ResumeService {
     public void updateRefinedText(UUID resumeId, String refinedText, ResumeStatus status) {
         transactionTemplate.executeWithoutResult(ts -> {
             Resume resume = resumeRepository.findById(resumeId)
-                    .orElseThrow(() -> new ResumeNotFoundException(resumeId));
+                    .orElseThrow(ResumeNotFoundException::new);
             if (refinedText != null) {
                 resume.setRawText(refinedText);
             }
@@ -121,18 +120,13 @@ public class ResumeService {
 
     @Transactional(readOnly = true)
     public Page<Resume> findByUserId(UUID userId, Pageable pageable) {
-        return resumeRepository.findByUserIdAndDeletedAtIsNull(userId, pageable);
+        return resumeRepository.findByUserId(userId, pageable);
     }
 
-    /**
-     * Owner-scoped lookup. Throws {@link ResumeNotFoundException} (404) both when
-     * the resume does not exist and when it belongs to another user, so IDOR
-     * attempts are rejected before any Storage/S3 call is made.
-     */
     @Transactional(readOnly = true)
     public Resume findByIdForUser(UUID id, UUID userId) {
-        return resumeRepository.findByIdAndUserIdAndDeletedAtIsNull(id, userId)
-                .orElseThrow(() -> new ResumeNotFoundException(id));
+        return resumeRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(ResumeNotFoundException::new);
     }
 
     public byte[] downloadRawPdf(UUID id, UUID userId) {
@@ -151,17 +145,14 @@ public class ResumeService {
         return storageService.generatePresignedDownloadUrl(resume.getStorageKey(), ttl);
     }
 
-    /**
-     * Soft-deletes a resume owned by {@code userId} by stamping {@code deletedAt}.
-     * The Storage object is intentionally retained. Ownership is enforced by the
-     * scoped query, so a cross-user delete resolves to 404.
-     */
     @Transactional
-    public void softDelete(UUID id, UUID userId) {
-        Resume resume = resumeRepository.findByIdAndUserIdAndDeletedAtIsNull(id, userId)
-                .orElseThrow(() -> new ResumeNotFoundException(id));
-        resume.setDeletedAt(Instant.now());
-        resumeRepository.save(resume);
+    public void delete(UUID id, UUID userId) {
+        Resume resume = resumeRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(ResumeNotFoundException::new);
+        if (resume.getStorageKey() != null) {
+            storageService.delete(resume.getStorageKey());
+        }
+        resumeRepository.delete(resume);
     }
 
     @Transactional
