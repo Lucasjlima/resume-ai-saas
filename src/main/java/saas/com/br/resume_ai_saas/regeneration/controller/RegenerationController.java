@@ -16,13 +16,13 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/resumes/{resumeId}")
+@RequestMapping("/api/resumes")
 @RequiredArgsConstructor
 public class RegenerationController {
 
     private final RegenerationService regenerationService;
 
-    @PostMapping("/analyses/{analysisId}/regenerations")
+    @PostMapping("/{resumeId}/analyses/{analysisId}/regenerations")
     @PreAuthorize("@resumeSecurity.isOwner(#resumeId)")
     public ResponseEntity<RegenerationResponse> trigger(@PathVariable UUID resumeId,
                                                         @PathVariable Long analysisId) {
@@ -32,7 +32,7 @@ public class RegenerationController {
                         regenerationService.regenerate(resumeId, analysisId, userId)));
     }
 
-    @GetMapping("/analyses/{analysisId}/regenerations")
+    @GetMapping("/{resumeId}/analyses/{analysisId}/regenerations")
     @PreAuthorize("@resumeSecurity.isOwner(#resumeId)")
     public ResponseEntity<List<RegenerationResponse>> listByAnalysis(@PathVariable UUID resumeId,
                                                                      @PathVariable Long analysisId) {
@@ -42,7 +42,7 @@ public class RegenerationController {
         return ResponseEntity.ok(responses);
     }
 
-    @GetMapping("/regenerations/{regenerationId}")
+    @GetMapping("/{resumeId}/regenerations/{regenerationId}")
     @PreAuthorize("@resumeSecurity.isOwner(#resumeId)")
     public ResponseEntity<RegenerationResponse> findById(@PathVariable UUID resumeId,
                                                          @PathVariable UUID regenerationId) {
@@ -50,7 +50,7 @@ public class RegenerationController {
                 regenerationService.findByIdForResume(regenerationId, resumeId)));
     }
 
-    @GetMapping("/regenerations/{regenerationId}/download")
+    @GetMapping("/{resumeId}/regenerations/{regenerationId}/download")
     @PreAuthorize("@resumeSecurity.isOwner(#resumeId)")
     public ResponseEntity<byte[]> download(@PathVariable UUID resumeId,
                                            @PathVariable UUID regenerationId) {
