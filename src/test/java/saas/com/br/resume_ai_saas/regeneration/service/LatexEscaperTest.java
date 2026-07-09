@@ -31,7 +31,14 @@ class LatexEscaperTest {
     @Test
     @DisplayName("leaves plain text untouched (including accents)")
     void plainTextUntouched() {
-        assertThat(LatexEscaper.escape("Desenvolvedora Sênior — São Paulo"))
-                .isEqualTo("Desenvolvedora Sênior — São Paulo");
+        assertThat(LatexEscaper.escape("Desenvolvedora Sênior em São Paulo"))
+                .isEqualTo("Desenvolvedora Sênior em São Paulo");
+    }
+
+    @Test
+    @DisplayName("converts unicode dashes to LaTeX ligatures (glyphs missing in Computer Modern)")
+    void convertsUnicodeDashes() {
+        assertThat(LatexEscaper.escape("São Paulo — SP")).isEqualTo("São Paulo --- SP");
+        assertThat(LatexEscaper.escape("2019–2021")).isEqualTo("2019--2021");
     }
 }

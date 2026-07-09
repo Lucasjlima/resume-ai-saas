@@ -26,6 +26,10 @@ public final class LatexEscaper {
                 case '%' -> sb.append("\\%");
                 case '~' -> sb.append("\\textasciitilde{}");
                 case '^' -> sb.append("\\textasciicircum{}");
+                // Computer Modern lacks these glyphs — the compiler drops them
+                // silently, so translate to the native LaTeX dash ligatures.
+                case '—' -> sb.append("---");
+                case '–' -> sb.append("--");
                 default -> sb.append(c);
             }
         }
