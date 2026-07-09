@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.support.TransactionTemplate;
 import saas.com.br.resume_ai_saas.exception.ResumeNotFoundException;
+import saas.com.br.resume_ai_saas.regeneration.repository.ResumeRegenerationRepository;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import saas.com.br.resume_ai_saas.resume.repository.ResumeRepository;
 import saas.com.br.resume_ai_saas.storage.service.ResumeStorageService;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.*;
 class ResumeServiceTest {
 
     @Mock private ResumeRepository resumeRepository;
+    @Mock private ResumeRegenerationRepository regenerationRepository;
     @Mock private ResumeStorageService storageService;
     @Mock private ResumeTextExtractionService textExtractionService;
     @Mock private ResumeTextRefinementService textRefinementService;
@@ -43,8 +45,8 @@ class ResumeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ResumeService(resumeRepository, storageService, textExtractionService,
-                textRefinementService, executor, transactionTemplate);
+        service = new ResumeService(resumeRepository, regenerationRepository, storageService,
+                textExtractionService, textRefinementService, executor, transactionTemplate);
     }
 
     @Test
@@ -86,6 +88,28 @@ class ResumeServiceTest {
         service.delete(resumeId, ownerId);
 
         verify(storageService).delete("resumes/" + ownerId + "/" + resumeId + ".pdf");
+        verify(resumeRepository).delete(resume);
+    }
+
+    @Test
+    @DisplayName("delete: also purges regenerated PDFs from Storage before the DB cascade")
+    void delete_purgesRegeneratedPdfsFromStorage() {
+        Resume resume = Resume.builder()
+                .id(resumeId)
+                .userId(ownerId)
+                .storageKey("resumes/" + ownerId + "/" + resumeId + ".pdf")
+                .build();
+        when(resumeRepository.findByIdAndUserId(resumeId, ownerId))
+                .thenReturn(Optional.of(resume));
+        String regenPath1 = "resume-regenerations/" + ownerId + "/" + UUID.randomUUID() + ".pdf";
+        String regenPath2 = "resume-regenerations/" + ownerId + "/" + UUID.randomUUID() + ".pdf";
+        when(regenerationRepository.findPdfStoragePathsByResumeId(resumeId))
+                .thenReturn(java.util.List.of(regenPath1, regenPath2));
+
+        service.delete(resumeId, ownerId);
+
+        verify(storageService).delete(regenPath1);
+        verify(storageService).delete(regenPath2);
         verify(resumeRepository).delete(resume);
     }
 
