@@ -61,6 +61,12 @@
             <artifactId>spring-ai-starter-model-google-genai</artifactId>
         </dependency>
 
+        <!-- LaTeX templating (resume regeneration) -->
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
