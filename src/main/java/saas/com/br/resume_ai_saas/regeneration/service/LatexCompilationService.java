@@ -83,7 +83,13 @@ public class LatexCompilationService {
             return;
         }
         try (Stream<Path> paths = Files.walk(workDir)) {
-            paths.sorted(Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    log.warn("Failed to delete path inside temp dir: {}", path, e);
+                }
+            });
         } catch (IOException e) {
             log.warn("Failed to clean LaTeX temp dir {}", workDir, e);
         }
