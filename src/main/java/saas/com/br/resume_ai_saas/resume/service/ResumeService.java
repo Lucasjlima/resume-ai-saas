@@ -107,7 +107,7 @@ public class ResumeService {
     public void updateRefinedText(UUID resumeId, String refinedText, ResumeStatus status) {
         transactionTemplate.executeWithoutResult(ts -> {
             Resume resume = resumeRepository.findById(resumeId)
-                    .orElseThrow(ResumeNotFoundException::new);
+                    .orElseThrow(() -> new ResumeNotFoundException(resumeId));
             if (refinedText != null) {
                 resume.setRawText(refinedText);
             }
@@ -126,7 +126,7 @@ public class ResumeService {
     @Transactional(readOnly = true)
     public Resume findByIdForUser(UUID id, UUID userId) {
         return resumeRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(ResumeNotFoundException::new);
+                .orElseThrow(() -> new ResumeNotFoundException(id));
     }
 
     public byte[] downloadRawPdf(UUID id, UUID userId) {
@@ -148,7 +148,7 @@ public class ResumeService {
     @Transactional
     public void delete(UUID id, UUID userId) {
         Resume resume = resumeRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(ResumeNotFoundException::new);
+                .orElseThrow(() -> new ResumeNotFoundException(id));
         if (resume.getStorageKey() != null) {
             storageService.delete(resume.getStorageKey());
         }

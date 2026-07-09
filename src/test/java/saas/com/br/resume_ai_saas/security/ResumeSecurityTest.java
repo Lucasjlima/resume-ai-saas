@@ -44,9 +44,9 @@ class ResumeSecurityTest {
     }
 
     @Test
-    @DisplayName("returns true when the authenticated user owns an active resume")
-    void isOwner_true_whenUserOwnsActiveResume() {
-        when(resumeRepository.existsByIdAndUserIdAndDeletedAtIsNull(resumeId, userId)).thenReturn(true);
+    @DisplayName("returns true when the authenticated user owns the resume")
+    void isOwner_true_whenUserOwnsResume() {
+        when(resumeRepository.existsByIdAndUserId(resumeId, userId)).thenReturn(true);
 
         assertThat(resumeSecurity.isOwner(resumeId)).isTrue();
     }
@@ -54,7 +54,7 @@ class ResumeSecurityTest {
     @Test
     @DisplayName("returns false when the resume belongs to another user (IDOR attempt)")
     void isOwner_false_whenResumeBelongsToAnotherUser() {
-        when(resumeRepository.existsByIdAndUserIdAndDeletedAtIsNull(resumeId, userId)).thenReturn(false);
+        when(resumeRepository.existsByIdAndUserId(resumeId, userId)).thenReturn(false);
 
         assertThat(resumeSecurity.isOwner(resumeId)).isFalse();
     }
