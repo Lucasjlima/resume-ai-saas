@@ -1,20 +1,20 @@
 <#ftl output_format="plainText">
-\documentclass[11pt,a4paper]{article}
+\documentclass[<#if compact>10pt<#else>11pt</#if>,a4paper]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage[margin=2.2cm]{geometry}
+\usepackage[margin=<#if compact>1.5cm<#else>2.2cm</#if>]{geometry}
 \usepackage{enumitem}
 \usepackage{titlesec}
 \usepackage{parskip}
 \pagestyle{empty}
 \titleformat{\section}{\large\bfseries}{}{0pt}{}[\titlerule]
-\titlespacing*{\section}{0pt}{10pt}{6pt}
-\setlist[itemize]{leftmargin=*,nosep,topsep=2pt}
+\titlespacing*{\section}{0pt}{<#if compact>6pt<#else>10pt</#if>}{<#if compact>3pt<#else>6pt</#if>}
+\setlist[itemize]{leftmargin=*,nosep,topsep=<#if compact>1pt<#else>2pt</#if>}
 
 \begin{document}
 
 \begin{center}
-    {\LARGE \textbf{${nome}}}\\[6pt]
+    {\LARGE \textbf{${nome}}}\\[<#if compact>4pt<#else>6pt</#if>]
     ${contato}
 \end{center}
 
@@ -32,7 +32,7 @@ ${resumo}
 </#list>
 \end{itemize}
 </#if>
-<#if exp?has_next>\vspace{6pt}</#if>
+<#if exp?has_next>\vspace{<#if compact>3pt<#else>6pt</#if>}</#if>
 </#list>
 </#if>
 

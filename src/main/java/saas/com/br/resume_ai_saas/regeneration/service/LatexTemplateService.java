@@ -32,19 +32,24 @@ public class LatexTemplateService {
         this.freemarker.setDefaultEncoding("UTF-8");
     }
 
-    public String render(GeneratedResume resume) {
+    /**
+     * @param compact denser layout (smaller font, margins and spacing) used
+     *                as fallback when the regular layout overflows one page.
+     */
+    public String render(GeneratedResume resume, boolean compact) {
         try {
             Template template = freemarker.getTemplate(TEMPLATE_NAME);
             StringWriter out = new StringWriter();
-            template.process(buildModel(resume), out);
+            template.process(buildModel(resume, compact), out);
             return out.toString();
         } catch (Exception e) {
             throw new LatexTemplateException("Failed to render LaTeX template", e);
         }
     }
 
-    private Map<String, Object> buildModel(GeneratedResume resume) {
+    private Map<String, Object> buildModel(GeneratedResume resume, boolean compact) {
         Map<String, Object> model = new LinkedHashMap<>();
+        model.put("compact", compact);
         GeneratedResume.DadosPessoais dados = resume.dadosPessoais();
 
         model.put("nome", escape(dados.nome()));

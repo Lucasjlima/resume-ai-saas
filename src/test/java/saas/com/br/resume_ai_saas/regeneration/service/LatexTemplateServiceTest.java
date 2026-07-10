@@ -27,9 +27,11 @@ class LatexTemplateServiceTest {
                 List.of(new GeneratedResume.Certificacao("AWS SAA", "Amazon", "03/2023")),
                 List.of(new GeneratedResume.Idioma("Inglês", "Avançado")));
 
-        String tex = service.render(resume);
+        String tex = service.render(resume, false);
 
         assertThat(tex).contains("\\documentclass");
+        assertThat(tex).contains("11pt");
+        assertThat(tex).contains("margin=2.2cm");
         assertThat(tex).contains("Maria \\& Silva");
         assertThat(tex).contains("Resumo com 100\\% de foco.");
         assertThat(tex).contains("C\\&A");
@@ -53,12 +55,28 @@ class LatexTemplateServiceTest {
                 List.of(),
                 List.of());
 
-        String tex = service.render(resume);
+        String tex = service.render(resume, false);
 
         assertThat(tex).doesNotContain("Experiência Profissional");
         assertThat(tex).doesNotContain("Formação Acadêmica");
         assertThat(tex).doesNotContain("Certificações");
         assertThat(tex).doesNotContain("Idiomas");
         assertThat(tex).contains("Habilidades");
+    }
+
+    @Test
+    @DisplayName("compact mode shrinks font, margins and spacing for the one-page fallback")
+    void compactModeUsesDenserLayout() {
+        GeneratedResume resume = new GeneratedResume(
+                new GeneratedResume.DadosPessoais("Maria", "maria@ex.com", null, null, null),
+                "Resumo.",
+                List.of(), List.of(), List.of("Java"), List.of(), List.of());
+
+        String tex = service.render(resume, true);
+
+        assertThat(tex).contains("10pt");
+        assertThat(tex).contains("margin=1.5cm");
+        assertThat(tex).doesNotContain("11pt");
+        assertThat(tex).doesNotContain("margin=2.2cm");
     }
 }

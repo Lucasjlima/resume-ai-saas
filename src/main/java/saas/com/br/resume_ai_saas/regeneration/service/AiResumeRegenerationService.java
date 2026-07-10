@@ -40,6 +40,12 @@ public class AiResumeRegenerationService {
                   empty array []. NEVER fill them with invented content.
                 - Write in the SAME LANGUAGE used in the original resume.
 
+                SINGLE-PAGE CONSTRAINT (the output is typeset into a one-page PDF):
+                - "resumo_profissional": at most 3 short sentences.
+                - Bullets: concise, at most ~20 words each, and at most 4 bullets per
+                  experience — condense wording instead of listing every detail, but
+                  NEVER drop an employer, role, date or section to save space.
+
                 OUTPUT: respond ONLY with the JSON object, following the requested schema.
 
                 ORIGINAL RESUME:

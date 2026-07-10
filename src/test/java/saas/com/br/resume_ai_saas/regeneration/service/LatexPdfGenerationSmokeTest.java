@@ -50,11 +50,12 @@ class LatexPdfGenerationSmokeTest {
                 List.of(new GeneratedResume.Idioma("Inglês", "Avançado"),
                         new GeneratedResume.Idioma("Português", "Nativo")));
 
-        String texSource = new LatexTemplateService().render(resume);
+        String texSource = new LatexTemplateService().render(resume, false);
         byte[] pdf = new LatexCompilationService(compiler).compile(texSource);
 
         assertThat(pdf).hasSizeGreaterThan(1000);
         assertThat(new String(pdf, 0, 5)).isEqualTo("%PDF-");
+        assertThat(new PdfPageCounter().count(pdf)).isEqualTo(1);
 
         Path artifact = Path.of("target", "regeneration-smoke.pdf");
         Files.createDirectories(artifact.getParent());

@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -50,6 +51,7 @@ class RegenerationServiceTest {
     @Mock private AiResumeRegenerationService aiService;
     @Mock private LatexTemplateService latexTemplateService;
     @Mock private LatexCompilationService latexCompilationService;
+    @Mock private PdfPageCounter pdfPageCounter;
     @Mock private ResumeStorageService storageService;
     @Mock private Executor executor;
     @Mock private TransactionTemplate transactionTemplate;
@@ -68,7 +70,8 @@ class RegenerationServiceTest {
     void setUp() {
         service = new RegenerationService(regenerationRepository, analysisRepository, aiService,
                 new GeneratedResumeValidator(), latexTemplateService, latexCompilationService,
-                storageService, executor, transactionTemplate, DAILY_LIMIT, MAX_RETRIES);
+                pdfPageCounter, storageService, executor, transactionTemplate, DAILY_LIMIT, MAX_RETRIES);
+        lenient().when(pdfPageCounter.count(any())).thenReturn(1);
 
         resume = Resume.builder().id(resumeId).userId(userId).rawText("original resume text").build();
         analysis = Analysis.builder()
@@ -152,7 +155,7 @@ class RegenerationServiceTest {
         ResumeRegeneration regeneration = pendingRegeneration();
         when(regenerationRepository.findById(regenerationId)).thenReturn(Optional.of(regeneration));
         when(aiService.regenerate(anyString(), any(), anyString())).thenReturn(sampleGenerated());
-        when(latexTemplateService.render(any())).thenReturn("tex");
+        when(latexTemplateService.render(any(), anyBoolean())).thenReturn("tex");
         when(latexCompilationService.compile("tex")).thenReturn(new byte[]{1});
         when(storageService.uploadRegeneration(eq(userId), eq(regenerationId), any()))
                 .thenReturn("resume-regenerations/" + userId + "/" + regenerationId + ".pdf");
@@ -168,6 +171,28 @@ class RegenerationServiceTest {
     }
 
     @Test
+    @DisplayName("pipeline: PDF over one page triggers a compact-layout recompilation")
+    void pipeline_multiPagePdf_recompilesCompact() {
+        ResumeRegeneration regeneration = pendingRegeneration();
+        when(regenerationRepository.findById(regenerationId)).thenReturn(Optional.of(regeneration));
+        when(aiService.regenerate(anyString(), any(), anyString())).thenReturn(sampleGenerated());
+        when(latexTemplateService.render(any(), eq(false))).thenReturn("tex");
+        when(latexTemplateService.render(any(), eq(true))).thenReturn("tex-compact");
+        when(latexCompilationService.compile("tex")).thenReturn(new byte[]{1});
+        when(latexCompilationService.compile("tex-compact")).thenReturn(new byte[]{2});
+        when(pdfPageCounter.count(new byte[]{1})).thenReturn(2);
+        when(pdfPageCounter.count(new byte[]{2})).thenReturn(1);
+        when(storageService.uploadRegeneration(any(), any(), any())).thenReturn("path.pdf");
+
+        service.processRegenerationAsync(regenerationId);
+
+        assertThat(regeneration.getStatus()).isEqualTo(RegenerationStatus.DONE);
+        verify(latexCompilationService).compile("tex-compact");
+        verify(storageService).uploadRegeneration(eq(userId), eq(regenerationId), eq(new byte[]{2}));
+        assertThat(regeneration.getRetryCount()).isZero();
+    }
+
+    @Test
     @DisplayName("pipeline: AI failure retries automatically without consuming attempt_number")
     void pipeline_aiFailureThenSuccess_retriesWithoutNewAttempt() {
         ResumeRegeneration regeneration = pendingRegeneration();
@@ -175,7 +200,7 @@ class RegenerationServiceTest {
         when(aiService.regenerate(anyString(), any(), anyString()))
                 .thenThrow(new RuntimeException("AI down"))
                 .thenReturn(sampleGenerated());
-        when(latexTemplateService.render(any())).thenReturn("tex");
+        when(latexTemplateService.render(any(), anyBoolean())).thenReturn("tex");
         when(latexCompilationService.compile("tex")).thenReturn(new byte[]{1});
         when(storageService.uploadRegeneration(any(), any(), any())).thenReturn("path.pdf");
 
@@ -193,7 +218,7 @@ class RegenerationServiceTest {
         ResumeRegeneration regeneration = pendingRegeneration();
         when(regenerationRepository.findById(regenerationId)).thenReturn(Optional.of(regeneration));
         when(aiService.regenerate(anyString(), any(), anyString())).thenReturn(sampleGenerated());
-        when(latexTemplateService.render(any())).thenReturn("tex");
+        when(latexTemplateService.render(any(), anyBoolean())).thenReturn("tex");
         when(latexCompilationService.compile("tex"))
                 .thenThrow(new LatexCompilationException("compiler crashed"))
                 .thenReturn(new byte[]{1});

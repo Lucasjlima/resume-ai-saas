@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.StopWatch;
 import saas.com.br.resume_ai_saas.analyse.dto.response.Feedback;
 import saas.com.br.resume_ai_saas.analyse.entity.Analysis;
 import saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException;
@@ -38,6 +39,7 @@ public class RegenerationService {
     private final GeneratedResumeValidator validator;
     private final LatexTemplateService latexTemplateService;
     private final LatexCompilationService latexCompilationService;
+    private final PdfPageCounter pdfPageCounter;
     private final ResumeStorageService storageService;
     private final Executor executor;
     private final TransactionTemplate transactionTemplate;
@@ -50,6 +52,7 @@ public class RegenerationService {
                                GeneratedResumeValidator validator,
                                LatexTemplateService latexTemplateService,
                                LatexCompilationService latexCompilationService,
+                               PdfPageCounter pdfPageCounter,
                                ResumeStorageService storageService,
                                @Qualifier("applicationTaskExecutor") Executor executor,
                                TransactionTemplate transactionTemplate,
@@ -61,6 +64,7 @@ public class RegenerationService {
         this.validator = validator;
         this.latexTemplateService = latexTemplateService;
         this.latexCompilationService = latexCompilationService;
+        this.pdfPageCounter = pdfPageCounter;
         this.storageService = storageService;
         this.executor = executor;
         this.transactionTemplate = transactionTemplate;
@@ -146,20 +150,54 @@ public class RegenerationService {
     }
 
     private void runPipelineOnce(UUID regenerationId) {
+        StopWatch stopWatch = new StopWatch("Regeneration Pipeline - ID: " + regenerationId);
         PipelineContext context = markProcessing(regenerationId);
 
         GeneratedResume generated = context.generatedJson();
         if (generated == null) {
+            stopWatch.start("AI Generation");
             generated = validator.validateAndNormalize(
                     aiService.regenerate(context.resumeText(), context.feedback(), context.jobDescription()));
+            stopWatch.stop();
+
+            stopWatch.start("Persist generated_json");
             persistGeneratedJson(regenerationId, generated);
+            stopWatch.stop();
+        } else {
+            log.info("[Regeneração {}] Reutilizando generated_json persistido — IA não será chamada",
+                    regenerationId);
         }
 
-        String texSource = latexTemplateService.render(generated);
+        stopWatch.start("LaTeX Template Render");
+        String texSource = latexTemplateService.render(generated, false);
+        stopWatch.stop();
+
+        stopWatch.start("LaTeX Compilation");
         byte[] pdfBytes = latexCompilationService.compile(texSource);
+        stopWatch.stop();
+
+        int pages = pdfPageCounter.count(pdfBytes);
+        if (pages > 1) {
+            log.info("[Regeneração {}] PDF saiu com {} páginas — recompilando em layout compacto",
+                    regenerationId, pages);
+            stopWatch.start("Compact Recompilation");
+            pdfBytes = latexCompilationService.compile(latexTemplateService.render(generated, true));
+            stopWatch.stop();
+
+            int compactPages = pdfPageCounter.count(pdfBytes);
+            if (compactPages > 1) {
+                log.warn("[Regeneração {}] Ainda com {} páginas mesmo no layout compacto — conteúdo extenso demais",
+                        regenerationId, compactPages);
+            }
+        }
+
+        stopWatch.start("Storage Upload");
         String storagePath = storageService.uploadRegeneration(context.userId(), regenerationId, pdfBytes);
+        stopWatch.stop();
 
         markDone(regenerationId, storagePath);
+        log.info("[Regeneração {}] Pipeline concluído em {} s\n{}",
+                regenerationId, stopWatch.getTotalTimeSeconds(), stopWatch.prettyPrint());
     }
 
     private PipelineContext markProcessing(UUID regenerationId) {
