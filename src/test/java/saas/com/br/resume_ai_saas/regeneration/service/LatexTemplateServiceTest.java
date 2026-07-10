@@ -74,8 +74,8 @@ class LatexTemplateServiceTest {
 
         String tex = service.render(resume, true);
 
-        assertThat(tex).contains("10pt");
-        assertThat(tex).contains("margin=1.5cm");
+        assertThat(tex).contains("\\documentclass[9pt,a4paper]{extarticle}");
+        assertThat(tex).contains("margin=1.2cm");
         assertThat(tex).doesNotContain("11pt");
         assertThat(tex).doesNotContain("margin=2.2cm");
     }

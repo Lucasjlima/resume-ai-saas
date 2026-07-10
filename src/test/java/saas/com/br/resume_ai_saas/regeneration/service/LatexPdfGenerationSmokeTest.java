@@ -62,6 +62,65 @@ class LatexPdfGenerationSmokeTest {
         Files.write(artifact, pdf);
     }
 
+    @Test
+    @DisplayName("compact layout fits a long resume in one page where the regular layout overflows")
+    void compactLayoutFitsLongResumeInOnePage() {
+        String compiler = System.getenv().getOrDefault("LATEX_COMPILER_COMMAND", "tectonic");
+        Assumptions.assumeTrue(compilerAvailable(compiler),
+                "LaTeX compiler '" + compiler + "' not available — smoke test skipped");
+
+        GeneratedResume resume = longResume();
+        LatexTemplateService templates = new LatexTemplateService();
+        LatexCompilationService compilation = new LatexCompilationService(compiler);
+        PdfPageCounter counter = new PdfPageCounter();
+
+        int regularPages = counter.count(compilation.compile(templates.render(resume, false)));
+        int compactPages = counter.count(compilation.compile(templates.render(resume, true)));
+
+        assertThat(regularPages).isGreaterThan(1);
+        assertThat(compactPages).isEqualTo(1);
+    }
+
+    private static GeneratedResume longResume() {
+        List<String> bullets = List.of(
+                "Projetou e manteve microsserviços Spring Boot atendendo milhões de requisições mensais, "
+                        + "com foco em resiliência, idempotência e tolerância a falhas em cenários de pico",
+                "Reduziu o tempo de resposta médio das APIs em 40% com cache distribuído em Redis, "
+                        + "profiling de queries e otimização de índices no PostgreSQL",
+                "Implantou observabilidade completa com métricas, tracing distribuído e alertas, "
+                        + "reduzindo o tempo médio de detecção de incidentes de horas para minutos",
+                "Mentorou desenvolvedores júnior em boas práticas de testes automatizados, "
+                        + "code review e desenho de APIs, elevando a cobertura de testes do time");
+        List<GeneratedResume.Experiencia> experiencias = List.of(
+                new GeneratedResume.Experiencia("Engenheira de Software Sênior", "Empresa Alpha",
+                        "Jan 2022", null, true, bullets),
+                new GeneratedResume.Experiencia("Engenheira de Software Plena", "Empresa Beta",
+                        "Mar 2019", "Dez 2021", false, bullets),
+                new GeneratedResume.Experiencia("Desenvolvedora Backend", "Empresa Gama",
+                        "Jun 2017", "Fev 2019", false, bullets),
+                new GeneratedResume.Experiencia("Desenvolvedora Júnior", "Empresa Épsilon",
+                        "Jun 2016", "Mai 2017", false, bullets),
+                new GeneratedResume.Experiencia("Estagiária de Desenvolvimento", "Empresa Delta",
+                        "Jan 2015", "Mai 2016", false, bullets));
+        return new GeneratedResume(
+                new GeneratedResume.DadosPessoais(
+                        "Maria da Silva Santos", "maria.santos@exemplo.com", "(11) 99999-0000",
+                        "linkedin.com/in/maria-santos", "São Paulo — SP"),
+                "Engenheira de software com mais de 8 anos de experiência em backend Java, "
+                        + "arquitetura de microsserviços e liderança técnica de squads. "
+                        + "Focada em sistemas escaláveis, observabilidade e cultura de qualidade.",
+                experiencias,
+                List.of(new GeneratedResume.Educacao("Ciência da Computação", "USP", "2012", "2016"),
+                        new GeneratedResume.Educacao("MBA em Arquitetura de Software", "FIA", "2018", "2020")),
+                List.of("Java", "Spring Boot", "PostgreSQL", "AWS", "Docker", "Kubernetes",
+                        "Kafka", "Redis", "Terraform", "Observabilidade"),
+                List.of(new GeneratedResume.Certificacao("AWS Solutions Architect", "Amazon", "03/2023"),
+                        new GeneratedResume.Certificacao("CKAD", "CNCF", "08/2022")),
+                List.of(new GeneratedResume.Idioma("Inglês", "Avançado"),
+                        new GeneratedResume.Idioma("Espanhol", "Intermediário"),
+                        new GeneratedResume.Idioma("Português", "Nativo")));
+    }
+
     private static boolean compilerAvailable(String compiler) {
         try {
             Process process = new ProcessBuilder(compiler, "--version").start();
