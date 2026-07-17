@@ -28,7 +28,10 @@ public class GeneratedResumeValidator {
                 resume.resumoProfissional(),
                 emptyIfNull(resume.experiencias()),
                 emptyIfNull(resume.educacao()),
-                emptyIfNull(resume.skills()),
+                emptyIfNull(resume.skills()).stream()
+                        .map(grupo -> new GeneratedResume.SkillGroup(
+                                grupo.categoria(), emptyIfNull(grupo.itens())))
+                        .toList(),
                 emptyIfNull(resume.certificacoes()),
                 emptyIfNull(resume.idiomas())
         );

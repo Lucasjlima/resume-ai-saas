@@ -15,7 +15,7 @@ public record GeneratedResume(
         @JsonProperty("resumo_profissional") String resumoProfissional,
         @JsonProperty("experiencias") List<Experiencia> experiencias,
         @JsonProperty("educacao") List<Educacao> educacao,
-        @JsonProperty("skills") List<String> skills,
+        @JsonProperty("skills") List<SkillGroup> skills,
         @JsonProperty("certificacoes") List<Certificacao> certificacoes,
         @JsonProperty("idiomas") List<Idioma> idiomas
 ) {
@@ -42,6 +42,16 @@ public record GeneratedResume(
             @JsonProperty("instituicao") String instituicao,
             @JsonProperty("data_inicio") String dataInicio,
             @JsonProperty("data_fim") String dataFim
+    ) {}
+
+    /**
+     * Skills preserve the grouping of the original resume (e.g. "Linguagens",
+     * "Frameworks / Libs"); a resume without grouped skills yields a single
+     * group with an empty {@code categoria}.
+     */
+    public record SkillGroup(
+            @JsonProperty("categoria") String categoria,
+            @JsonProperty("itens") List<String> itens
     ) {}
 
     public record Certificacao(

@@ -39,6 +39,11 @@ public class AiResumeRegenerationService {
                 - Sections with no content in the original resume MUST be returned as an
                   empty array []. NEVER fill them with invented content.
                 - Write in the SAME LANGUAGE used in the original resume.
+                - "skills": group the skills into categories, preserving EXACTLY the
+                  category names and order used in the original resume (e.g. "Linguagens",
+                  "Frameworks / Libs", "Back-End / APIs", "DevOps / Cloud"). If the
+                  original resume does NOT group its skills, return a single element
+                  with "categoria" set to "" holding all skills.
 
                 SINGLE-PAGE CONSTRAINT (the output is typeset into a one-page PDF):
                 - "resumo_profissional": at most 3 short sentences.

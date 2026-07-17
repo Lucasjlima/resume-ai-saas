@@ -168,26 +168,24 @@ public class RegenerationService {
                     regenerationId);
         }
 
-        stopWatch.start("LaTeX Template Render");
-        String texSource = latexTemplateService.render(generated, false);
-        stopWatch.stop();
-
-        stopWatch.start("LaTeX Compilation");
-        byte[] pdfBytes = latexCompilationService.compile(texSource);
-        stopWatch.stop();
-
-        int pages = pdfPageCounter.count(pdfBytes);
-        if (pages > 1) {
-            log.info("[Regeneração {}] PDF saiu com {} páginas — recompilando em layout compacto",
-                    regenerationId, pages);
-            stopWatch.start("Compact Recompilation");
-            pdfBytes = latexCompilationService.compile(latexTemplateService.render(generated, true));
+        // Density ladder: use the least dense layout that fits one page, so
+        // short resumes keep breathing room and long ones get compressed.
+        byte[] pdfBytes = null;
+        for (LayoutDensity density : LayoutDensity.values()) {
+            stopWatch.start("LaTeX Compilation (" + density.name() + ")");
+            pdfBytes = latexCompilationService.compile(latexTemplateService.render(generated, density));
             stopWatch.stop();
 
-            int compactPages = pdfPageCounter.count(pdfBytes);
-            if (compactPages > 1) {
-                log.warn("[Regeneração {}] Ainda com {} páginas mesmo no layout compacto — conteúdo extenso demais",
-                        regenerationId, compactPages);
+            int pages = pdfPageCounter.count(pdfBytes);
+            if (pages == 1) {
+                break;
+            }
+            if (density == LayoutDensity.COMPACT) {
+                log.warn("[Regeneração {}] Ainda com {} páginas mesmo no layout mais denso — conteúdo extenso demais",
+                        regenerationId, pages);
+            } else {
+                log.info("[Regeneração {}] PDF com {} páginas no layout {} — tentando layout mais denso",
+                        regenerationId, pages, density);
             }
         }
 

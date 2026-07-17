@@ -1,22 +1,23 @@
 <#ftl output_format="plainText">
-<#if compact>\documentclass[9pt,a4paper]{extarticle}<#else>\documentclass[11pt,a4paper]{article}</#if>
+${documentClass}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage[margin=<#if compact>1.2cm<#else>2.2cm</#if>]{geometry}
+\usepackage[margin=${margin}]{geometry}
 \usepackage{enumitem}
 \usepackage{titlesec}
 \usepackage{parskip}
 \pagestyle{empty}
-<#if compact>\setlength{\parskip}{3pt}</#if>
-\titleformat{\section}{<#if compact>\normalsize<#else>\large</#if>\bfseries}{}{0pt}{}[\titlerule]
-\titlespacing*{\section}{0pt}{<#if compact>4pt<#else>10pt</#if>}{<#if compact>2pt<#else>6pt</#if>}
-\setlist[itemize]{leftmargin=*,nosep,topsep=<#if compact>0pt<#else>2pt</#if>}
+\flushbottom
+\setlength{\parskip}{${parskip}}
+\titleformat{\section}{${sectionFont}\bfseries}{}{0pt}{}[\titlerule]
+\titlespacing*{\section}{0pt}{${sectionBefore}}{${sectionAfter}}
+\setlist[itemize]{leftmargin=*,nosep,topsep=${itemTopsep}}
 
 \begin{document}
 
 \begin{center}
-    {<#if compact>\Large<#else>\LARGE</#if> \textbf{${nome}}}\\[<#if compact>3pt<#else>6pt</#if>]
-    <#if compact>{\small ${contato}}<#else>${contato}</#if>
+    {${nameSize} \textbf{${nome}}}\\[${nameGap}]
+    <#if smallContact>{\small ${contato}}<#else>${contato}</#if>
 \end{center}
 
 \section{Resumo Profissional}
@@ -33,7 +34,7 @@ ${resumo}
 </#list>
 \end{itemize}
 </#if>
-<#if exp?has_next>\vspace{<#if compact>2pt<#else>6pt</#if>}</#if>
+<#if exp?has_next>\vspace{${experienceGap}}</#if>
 </#list>
 </#if>
 
@@ -45,8 +46,12 @@ ${resumo}
 </#if>
 
 <#if skills?size gt 0>
-\section{Habilidades}
-${skills?join(" \\textbullet{} ")}
+\section{Habilidades Técnicas}
+<#list skills as grupo>
+<#if grupo.categoria != "">\textbf{${grupo.categoria}:} ${grupo.itens?join(", ")}.\par
+<#else>${grupo.itens?join(" \\textbullet{} ")}\par
+</#if>
+</#list>
 </#if>
 
 <#if certificacoes?size gt 0>

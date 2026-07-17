@@ -104,7 +104,9 @@ class RegenerationServiceTest {
     private GeneratedResume sampleGenerated() {
         return new GeneratedResume(
                 new GeneratedResume.DadosPessoais("Maria", "maria@ex.com", null, null, null),
-                "Resumo.", List.of(), List.of(), List.of("Java"), List.of(), List.of());
+                "Resumo.", List.of(), List.of(),
+                List.of(new GeneratedResume.SkillGroup("Linguagens", List.of("Java"))),
+                List.of(), List.of());
     }
 
     // --- trigger / rate limit / ownership -----------------------------------
@@ -155,7 +157,7 @@ class RegenerationServiceTest {
         ResumeRegeneration regeneration = pendingRegeneration();
         when(regenerationRepository.findById(regenerationId)).thenReturn(Optional.of(regeneration));
         when(aiService.regenerate(anyString(), any(), anyString())).thenReturn(sampleGenerated());
-        when(latexTemplateService.render(any(), anyBoolean())).thenReturn("tex");
+        when(latexTemplateService.render(any(), any())).thenReturn("tex");
         when(latexCompilationService.compile("tex")).thenReturn(new byte[]{1});
         when(storageService.uploadRegeneration(eq(userId), eq(regenerationId), any()))
                 .thenReturn("resume-regenerations/" + userId + "/" + regenerationId + ".pdf");
@@ -171,15 +173,15 @@ class RegenerationServiceTest {
     }
 
     @Test
-    @DisplayName("pipeline: PDF over one page triggers a compact-layout recompilation")
-    void pipeline_multiPagePdf_recompilesCompact() {
+    @DisplayName("pipeline: multi-page PDF walks the density ladder and stops at the first layout that fits")
+    void pipeline_multiPagePdf_walksDensityLadder() {
         ResumeRegeneration regeneration = pendingRegeneration();
         when(regenerationRepository.findById(regenerationId)).thenReturn(Optional.of(regeneration));
         when(aiService.regenerate(anyString(), any(), anyString())).thenReturn(sampleGenerated());
-        when(latexTemplateService.render(any(), eq(false))).thenReturn("tex");
-        when(latexTemplateService.render(any(), eq(true))).thenReturn("tex-compact");
+        when(latexTemplateService.render(any(), eq(LayoutDensity.NORMAL))).thenReturn("tex");
+        when(latexTemplateService.render(any(), eq(LayoutDensity.MEDIUM))).thenReturn("tex-medium");
         when(latexCompilationService.compile("tex")).thenReturn(new byte[]{1});
-        when(latexCompilationService.compile("tex-compact")).thenReturn(new byte[]{2});
+        when(latexCompilationService.compile("tex-medium")).thenReturn(new byte[]{2});
         when(pdfPageCounter.count(new byte[]{1})).thenReturn(2);
         when(pdfPageCounter.count(new byte[]{2})).thenReturn(1);
         when(storageService.uploadRegeneration(any(), any(), any())).thenReturn("path.pdf");
@@ -187,8 +189,9 @@ class RegenerationServiceTest {
         service.processRegenerationAsync(regenerationId);
 
         assertThat(regeneration.getStatus()).isEqualTo(RegenerationStatus.DONE);
-        verify(latexCompilationService).compile("tex-compact");
+        verify(latexCompilationService).compile("tex-medium");
         verify(storageService).uploadRegeneration(eq(userId), eq(regenerationId), eq(new byte[]{2}));
+        verify(latexTemplateService, never()).render(any(), eq(LayoutDensity.COMPACT));
         assertThat(regeneration.getRetryCount()).isZero();
     }
 
@@ -200,7 +203,7 @@ class RegenerationServiceTest {
         when(aiService.regenerate(anyString(), any(), anyString()))
                 .thenThrow(new RuntimeException("AI down"))
                 .thenReturn(sampleGenerated());
-        when(latexTemplateService.render(any(), anyBoolean())).thenReturn("tex");
+        when(latexTemplateService.render(any(), any())).thenReturn("tex");
         when(latexCompilationService.compile("tex")).thenReturn(new byte[]{1});
         when(storageService.uploadRegeneration(any(), any(), any())).thenReturn("path.pdf");
 
@@ -218,7 +221,7 @@ class RegenerationServiceTest {
         ResumeRegeneration regeneration = pendingRegeneration();
         when(regenerationRepository.findById(regenerationId)).thenReturn(Optional.of(regeneration));
         when(aiService.regenerate(anyString(), any(), anyString())).thenReturn(sampleGenerated());
-        when(latexTemplateService.render(any(), anyBoolean())).thenReturn("tex");
+        when(latexTemplateService.render(any(), any())).thenReturn("tex");
         when(latexCompilationService.compile("tex"))
                 .thenThrow(new LatexCompilationException("compiler crashed"))
                 .thenReturn(new byte[]{1});

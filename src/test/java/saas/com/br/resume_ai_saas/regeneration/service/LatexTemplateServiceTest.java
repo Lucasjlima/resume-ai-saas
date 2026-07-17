@@ -23,15 +23,17 @@ class LatexTemplateServiceTest {
                 List.of(new GeneratedResume.Experiencia(
                         "Dev C#", "C&A", "Jan 2020", null, true, List.of("Aumentou 50% a cobertura"))),
                 List.of(new GeneratedResume.Educacao("Ciência da Computação", "USP", "2016", "2020")),
-                List.of("Java", "C#"),
+                List.of(new GeneratedResume.SkillGroup("Linguagens", List.of("Java", "C#")),
+                        new GeneratedResume.SkillGroup("DevOps / Cloud", List.of("AWS", "Docker"))),
                 List.of(new GeneratedResume.Certificacao("AWS SAA", "Amazon", "03/2023")),
                 List.of(new GeneratedResume.Idioma("Inglês", "Avançado")));
 
-        String tex = service.render(resume, false);
+        String tex = service.render(resume, LayoutDensity.NORMAL);
 
-        assertThat(tex).contains("\\documentclass");
-        assertThat(tex).contains("11pt");
+        assertThat(tex).contains("\\documentclass[11pt,a4paper]{article}");
         assertThat(tex).contains("margin=2.2cm");
+        assertThat(tex).contains("\\textbf{Linguagens:} Java, C\\#.");
+        assertThat(tex).contains("\\textbf{DevOps / Cloud:} AWS, Docker.");
         assertThat(tex).contains("Maria \\& Silva");
         assertThat(tex).contains("Resumo com 100\\% de foco.");
         assertThat(tex).contains("C\\&A");
@@ -51,17 +53,20 @@ class LatexTemplateServiceTest {
                 "Resumo.",
                 List.of(),
                 List.of(),
-                List.of("Java"),
+                List.of(new GeneratedResume.SkillGroup("", List.of("Java"))),
                 List.of(),
                 List.of());
 
-        String tex = service.render(resume, false);
+        String tex = service.render(resume, LayoutDensity.NORMAL);
 
         assertThat(tex).doesNotContain("Experiência Profissional");
         assertThat(tex).doesNotContain("Formação Acadêmica");
         assertThat(tex).doesNotContain("Certificações");
         assertThat(tex).doesNotContain("Idiomas");
-        assertThat(tex).contains("Habilidades");
+        assertThat(tex).contains("Habilidades Técnicas");
+        // A resume without grouped skills renders them inline, without a bold label
+        assertThat(tex).doesNotContain("\\textbf{:}");
+        assertThat(tex).contains("Java");
     }
 
     @Test
@@ -70,13 +75,19 @@ class LatexTemplateServiceTest {
         GeneratedResume resume = new GeneratedResume(
                 new GeneratedResume.DadosPessoais("Maria", "maria@ex.com", null, null, null),
                 "Resumo.",
-                List.of(), List.of(), List.of("Java"), List.of(), List.of());
+                List.of(), List.of(),
+                List.of(new GeneratedResume.SkillGroup("", List.of("Java"))),
+                List.of(), List.of());
 
-        String tex = service.render(resume, true);
+        String tex = service.render(resume, LayoutDensity.COMPACT);
 
         assertThat(tex).contains("\\documentclass[9pt,a4paper]{extarticle}");
         assertThat(tex).contains("margin=1.2cm");
         assertThat(tex).doesNotContain("11pt");
         assertThat(tex).doesNotContain("margin=2.2cm");
+
+        String medium = service.render(resume, LayoutDensity.MEDIUM);
+        assertThat(medium).contains("\\documentclass[10pt,a4paper]{extarticle}");
+        assertThat(medium).contains("margin=1.6cm");
     }
 }

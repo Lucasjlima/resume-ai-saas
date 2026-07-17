@@ -59,6 +59,12 @@ class GeneratedResumeValidatorTest {
         assertThat(result.experiencias()).isEmpty();
         assertThat(result.educacao()).isEmpty();
         assertThat(result.skills()).isEmpty();
+
+        GeneratedResume groupWithNullItems = new GeneratedResume(
+                input.dadosPessoais(), input.resumoProfissional(), null, null,
+                List.of(new GeneratedResume.SkillGroup("Linguagens", null)), null, null);
+        assertThat(validator.validateAndNormalize(groupWithNullItems).skills())
+                .containsExactly(new GeneratedResume.SkillGroup("Linguagens", List.of()));
         assertThat(result.certificacoes()).isEmpty();
         assertThat(result.idiomas()).isEmpty();
     }
@@ -71,7 +77,7 @@ class GeneratedResumeValidatorTest {
                 "Resumo profissional.",
                 List.of(new GeneratedResume.Experiencia("Dev", "Acme", "Jan 2020", null, true, List.of("Fez X"))),
                 List.of(new GeneratedResume.Educacao("CC", "USP", "2016", "2020")),
-                List.of("Java"),
+                List.of(new GeneratedResume.SkillGroup("Linguagens", List.of("Java"))),
                 List.of(new GeneratedResume.Certificacao("Cert", "Org", "2021")),
                 List.of(new GeneratedResume.Idioma("Inglês", "Avançado")));
 

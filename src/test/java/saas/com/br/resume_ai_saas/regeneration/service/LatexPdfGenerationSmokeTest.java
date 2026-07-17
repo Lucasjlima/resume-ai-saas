@@ -45,12 +45,14 @@ class LatexPdfGenerationSmokeTest {
                                 List.of("Manteve APIs REST com ~99,9% de uptime"))),
                 List.of(new GeneratedResume.Educacao(
                         "Ciência da Computação", "USP", "2013", "2017")),
-                List.of("Java", "Spring Boot", "C#", "PostgreSQL", "LaTeX 100%"),
+                List.of(new GeneratedResume.SkillGroup("Linguagens", List.of("Java", "C#", "SQL")),
+                        new GeneratedResume.SkillGroup("Frameworks / Libs", List.of("Spring Boot", "Hibernate/JPA")),
+                        new GeneratedResume.SkillGroup("DevOps / Cloud", List.of("AWS", "Docker", "LaTeX 100%"))),
                 List.of(new GeneratedResume.Certificacao("AWS Solutions Architect", "Amazon", "03/2023")),
                 List.of(new GeneratedResume.Idioma("Inglês", "Avançado"),
                         new GeneratedResume.Idioma("Português", "Nativo")));
 
-        String texSource = new LatexTemplateService().render(resume, false);
+        String texSource = new LatexTemplateService().render(resume, LayoutDensity.NORMAL);
         byte[] pdf = new LatexCompilationService(compiler).compile(texSource);
 
         assertThat(pdf).hasSizeGreaterThan(1000);
@@ -74,8 +76,8 @@ class LatexPdfGenerationSmokeTest {
         LatexCompilationService compilation = new LatexCompilationService(compiler);
         PdfPageCounter counter = new PdfPageCounter();
 
-        int regularPages = counter.count(compilation.compile(templates.render(resume, false)));
-        int compactPages = counter.count(compilation.compile(templates.render(resume, true)));
+        int regularPages = counter.count(compilation.compile(templates.render(resume, LayoutDensity.NORMAL)));
+        int compactPages = counter.count(compilation.compile(templates.render(resume, LayoutDensity.COMPACT)));
 
         assertThat(regularPages).isGreaterThan(1);
         assertThat(compactPages).isEqualTo(1);
@@ -112,8 +114,12 @@ class LatexPdfGenerationSmokeTest {
                 experiencias,
                 List.of(new GeneratedResume.Educacao("Ciência da Computação", "USP", "2012", "2016"),
                         new GeneratedResume.Educacao("MBA em Arquitetura de Software", "FIA", "2018", "2020")),
-                List.of("Java", "Spring Boot", "PostgreSQL", "AWS", "Docker", "Kubernetes",
-                        "Kafka", "Redis", "Terraform", "Observabilidade"),
+                List.of(new GeneratedResume.SkillGroup("Linguagens",
+                                List.of("Java", "TypeScript", "Python", "SQL")),
+                        new GeneratedResume.SkillGroup("Frameworks / Libs",
+                                List.of("Spring Boot", "Hibernate/JPA", "React")),
+                        new GeneratedResume.SkillGroup("DevOps / Cloud",
+                                List.of("AWS", "Docker", "Kubernetes", "Kafka", "Redis", "Terraform"))),
                 List.of(new GeneratedResume.Certificacao("AWS Solutions Architect", "Amazon", "03/2023"),
                         new GeneratedResume.Certificacao("CKAD", "CNCF", "08/2022")),
                 List.of(new GeneratedResume.Idioma("Inglês", "Avançado"),

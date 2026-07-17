@@ -32,24 +32,30 @@ public class LatexTemplateService {
         this.freemarker.setDefaultEncoding("UTF-8");
     }
 
-    /**
-     * @param compact denser layout (smaller font, margins and spacing) used
-     *                as fallback when the regular layout overflows one page.
-     */
-    public String render(GeneratedResume resume, boolean compact) {
+    public String render(GeneratedResume resume, LayoutDensity density) {
         try {
             Template template = freemarker.getTemplate(TEMPLATE_NAME);
             StringWriter out = new StringWriter();
-            template.process(buildModel(resume, compact), out);
+            template.process(buildModel(resume, density), out);
             return out.toString();
         } catch (Exception e) {
             throw new LatexTemplateException("Failed to render LaTeX template", e);
         }
     }
 
-    private Map<String, Object> buildModel(GeneratedResume resume, boolean compact) {
+    private Map<String, Object> buildModel(GeneratedResume resume, LayoutDensity density) {
         Map<String, Object> model = new LinkedHashMap<>();
-        model.put("compact", compact);
+        model.put("documentClass", density.documentClass());
+        model.put("margin", density.margin());
+        model.put("parskip", density.parskip());
+        model.put("sectionFont", density.sectionFont());
+        model.put("sectionBefore", density.sectionBefore());
+        model.put("sectionAfter", density.sectionAfter());
+        model.put("itemTopsep", density.itemTopsep());
+        model.put("nameSize", density.nameSize());
+        model.put("nameGap", density.nameGap());
+        model.put("smallContact", density.smallContact());
+        model.put("experienceGap", density.experienceGap());
         GeneratedResume.DadosPessoais dados = resume.dadosPessoais();
 
         model.put("nome", escape(dados.nome()));
@@ -69,7 +75,10 @@ public class LatexTemplateService {
                 "periodo", buildPeriod(edu.dataInicio(), edu.dataFim(), false)
         )).toList());
 
-        model.put("skills", resume.skills().stream().map(LatexEscaper::escape).toList());
+        model.put("skills", resume.skills().stream().map(grupo -> Map.of(
+                "categoria", escape(grupo.categoria()),
+                "itens", grupo.itens() == null ? List.of() : grupo.itens().stream().map(LatexEscaper::escape).toList()
+        )).toList());
 
         model.put("certificacoes", resume.certificacoes().stream().map(cert -> Map.of(
                 "nome", escape(cert.nome()),
