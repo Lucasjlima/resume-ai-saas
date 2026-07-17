@@ -8,6 +8,10 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException;
+import saas.com.br.resume_ai_saas.regeneration.exception.RegenerationNotFoundException;
+import saas.com.br.resume_ai_saas.regeneration.exception.RegenerationNotReadyException;
+import saas.com.br.resume_ai_saas.regeneration.exception.RegenerationRateLimitExceededException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,11 +29,24 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             ResumeNotFoundException.class,
-            saas.com.br.resume_ai_saas.analyse.exception.AnalysisNotFoundException.class
+            AnalysisNotFoundException.class,
+            RegenerationNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.of(ex.getMessage(), 404));
+    }
+
+    @ExceptionHandler(RegenerationRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ErrorResponse.of(ex.getMessage(), 429));
+    }
+
+    @ExceptionHandler(RegenerationNotReadyException.class)
+    public ResponseEntity<ErrorResponse> handleRegenerationNotReady(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(ex.getMessage(), 409));
     }
 
     @ExceptionHandler(JWTVerificationException.class)

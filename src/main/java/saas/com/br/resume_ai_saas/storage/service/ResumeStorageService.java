@@ -33,7 +33,14 @@ public class ResumeStorageService {
 
 
     public String upload(UUID userId, UUID resumeId, byte[] pdfBytes) {
-        String key = buildKey(userId, resumeId);
+        return uploadPdf(buildKey(userId, resumeId), pdfBytes);
+    }
+
+    public String uploadRegeneration(UUID userId, UUID regenerationId, byte[] pdfBytes) {
+        return uploadPdf(buildRegenerationKey(userId, regenerationId), pdfBytes);
+    }
+
+    private String uploadPdf(String key, byte[] pdfBytes) {
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
@@ -76,7 +83,11 @@ public class ResumeStorageService {
     }
 
     public void deleteAllForUser(UUID userId) {
-        String prefix = "resumes/" + userId + "/";
+        deleteAllWithPrefix("resumes/" + userId + "/");
+        deleteAllWithPrefix("resume-regenerations/" + userId + "/");
+    }
+
+    private void deleteAllWithPrefix(String prefix) {
         List<ObjectIdentifier> keys = s3Client.listObjectsV2Paginator(b -> b.bucket(bucket).prefix(prefix))
                 .contents().stream()
                 .map(obj -> ObjectIdentifier.builder().key(obj.key()).build())
@@ -96,5 +107,9 @@ public class ResumeStorageService {
 
     private String buildKey(UUID userId, UUID resumeId) {
         return "resumes/" + userId + "/" + resumeId + ".pdf";
+    }
+
+    private String buildRegenerationKey(UUID userId, UUID regenerationId) {
+        return "resume-regenerations/" + userId + "/" + regenerationId + ".pdf";
     }
 }

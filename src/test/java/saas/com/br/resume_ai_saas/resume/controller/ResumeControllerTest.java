@@ -104,14 +104,14 @@ class ResumeControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /{id}: owner soft-delete returns 204")
+    @DisplayName("DELETE /{id}: owner delete returns 204")
     void delete_owner_returns204() throws Exception {
         when(resumeSecurity.isOwner(resumeId)).thenReturn(true);
 
         mockMvc.perform(delete("/api/resumes/{id}", resumeId))
                 .andExpect(status().isNoContent());
 
-        verify(resumeService).softDelete(resumeId, userId);
+        verify(resumeService).delete(resumeId, userId);
     }
 
     @Test
@@ -122,7 +122,7 @@ class ResumeControllerTest {
         mockMvc.perform(delete("/api/resumes/{id}", resumeId))
                 .andExpect(status().isForbidden());
 
-        verify(resumeService, never()).softDelete(any(), any());
+        verify(resumeService, never()).delete(any(), any());
     }
 
     private Resume sampleResume() {

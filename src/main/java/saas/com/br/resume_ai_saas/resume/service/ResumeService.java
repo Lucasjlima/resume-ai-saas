@@ -10,6 +10,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 import saas.com.br.resume_ai_saas.exception.ResumeNotFoundException;
+import saas.com.br.resume_ai_saas.regeneration.repository.ResumeRegenerationRepository;
 import saas.com.br.resume_ai_saas.resume.entity.Resume;
 import saas.com.br.resume_ai_saas.resume.entity.ResumeStatus;
 import saas.com.br.resume_ai_saas.resume.mapper.ResumeMapper;
@@ -28,6 +29,7 @@ import java.util.concurrent.Executor;
 public class ResumeService {
 
     private final ResumeRepository resumeRepository;
+    private final ResumeRegenerationRepository regenerationRepository;
     private final ResumeStorageService storageService;
     private final ResumeTextExtractionService textExtractionService;
     private final ResumeTextRefinementService textRefinementService;
@@ -35,12 +37,14 @@ public class ResumeService {
     private final TransactionTemplate transactionTemplate;
 
     public ResumeService(ResumeRepository resumeRepository,
+                         ResumeRegenerationRepository regenerationRepository,
                          ResumeStorageService storageService,
                          ResumeTextExtractionService textExtractionService,
                          ResumeTextRefinementService textRefinementService,
                          @Qualifier("applicationTaskExecutor") Executor executor,
                          TransactionTemplate transactionTemplate) {
         this.resumeRepository = resumeRepository;
+        this.regenerationRepository = regenerationRepository;
         this.storageService = storageService;
         this.textExtractionService = textExtractionService;
         this.textRefinementService = textRefinementService;
@@ -107,7 +111,7 @@ public class ResumeService {
     public void updateRefinedText(UUID resumeId, String refinedText, ResumeStatus status) {
         transactionTemplate.executeWithoutResult(ts -> {
             Resume resume = resumeRepository.findById(resumeId)
-                    .orElseThrow(ResumeNotFoundException::new);
+                    .orElseThrow(() -> new ResumeNotFoundException(resumeId));
             if (refinedText != null) {
                 resume.setRawText(refinedText);
             }
@@ -126,7 +130,7 @@ public class ResumeService {
     @Transactional(readOnly = true)
     public Resume findByIdForUser(UUID id, UUID userId) {
         return resumeRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(ResumeNotFoundException::new);
+                .orElseThrow(() -> new ResumeNotFoundException(id));
     }
 
     public byte[] downloadRawPdf(UUID id, UUID userId) {
@@ -148,7 +152,11 @@ public class ResumeService {
     @Transactional
     public void delete(UUID id, UUID userId) {
         Resume resume = resumeRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(ResumeNotFoundException::new);
+                .orElseThrow(() -> new ResumeNotFoundException(id));
+        // The DB cascade removes regeneration rows but not their Storage
+        // objects — those must be purged explicitly before the row goes away.
+        regenerationRepository.findPdfStoragePathsByResumeId(id)
+                .forEach(storageService::delete);
         if (resume.getStorageKey() != null) {
             storageService.delete(resume.getStorageKey());
         }
